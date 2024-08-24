@@ -32,7 +32,10 @@ jobs:
 
         # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-        
+
+        # Generate a list of files deleted in the last commit
+        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
+
         # Copy changed files to the temporary directory
         for file in $CHANGED_FILES; do
           if [ -f "$file" ]; then
@@ -40,6 +43,9 @@ jobs:
             cp "$file" "changed_files/$file"
           fi
         done
+
+        # Save deleted files list to a file
+        echo "$DELETED_FILES" > deleted_files.txt
 
     - name: Deploy changed files to FTP server
       env:
@@ -57,3 +63,24 @@ jobs:
           # Mirror command to upload only changed files, preserving existing files
           mirror --reverse --only-newer --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/
         "
+
+    - name: Remove deleted files from FTP server
+      if: success()  # Only run this step if the previous steps were successful
+      env:
+        FTP_HOST: ftpupload.net
+        FTP_USERNAME: if0_37166443
+        FTP_PASSWORD: uc24cfJGW8ry6t
+      run: |
+        while IFS= read -r file; do
+          if [ -n "$file" ]; then
+            lftp -c "
+              set ssl:verify-certificate no;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-force true;
+              set cmd:default-protocol ftp;
+              set ftp:list-options -a;
+              open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+              rm -rf htdocs/$file
+            "
+          fi
+        done < deleted_files.txt
