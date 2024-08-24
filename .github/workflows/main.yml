@@ -14,7 +14,6 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 2  # Fetch the last two commits to allow diff comparison
-      continue-on-error: false  # Fail the job if checkout fails
 
     - name: Install FTP deployment tool if not already installed
       run: |
@@ -25,33 +24,22 @@ jobs:
         else
           echo "lftp is already installed"
         fi
-      continue-on-error: false  # Fail the job if installation fails
 
     - name: Prepare changed files for deployment
       run: |
         # Create a temporary directory for changed files
         mkdir -p changed_files
 
-        # Generate a list of files changed in the last commit
+        # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-
+        
         # Copy changed files to the temporary directory
         for file in $CHANGED_FILES; do
           if [ -f "$file" ]; then
             mkdir -p "changed_files/$(dirname "$file")"
             cp "$file" "changed_files/$file"
-          elif [ -d "$file" ]; then
-            mkdir -p "changed_files/$file"
           fi
         done
-
-        # Find files that were deleted
-        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
-        
-        # Prepare a file with list of deleted files
-        echo "$DELETED_FILES" > deleted_files.txt
-
-      continue-on-error: false  # Fail the job if preparing files fails
 
     - name: Deploy changed files to FTP server
       env:
@@ -66,34 +54,6 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Upload only changed files
-          mirror --reverse --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/
+          # Mirror command to upload only changed files, preserving existing files
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/
         "
-      continue-on-error: false  # Fail the job if deployment fails
-
-    - name: Remove deleted files from FTP server
-      env:
-        FTP_HOST: ftpupload.net
-        FTP_USERNAME: if0_37166443
-        FTP_PASSWORD: uc24cfJGW8ry6t
-      run: |
-        lftp -c "
-          set ssl:verify-certificate no;
-          set ftp:ssl-protect-data true;
-          set ftp:ssl-force true;
-          set cmd:default-protocol ftp;
-          set ftp:list-options -a;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Remove deleted files from the FTP server
-          mirror --reverse --delete --verbose --no-perms --exclude-glob .git/ --exclude .github/ ./ htdocs/
-        "
-      continue-on-error: false  # Fail the job if removal fails
-
-    - name: Log error messages
-      run: |
-        # Check if there were errors during deployment and log them
-        if [ -f "/home/runner/.npm/_logs/$(ls /home/runner/.npm/_logs/)" ]; then
-          echo "Errors during deployment:"
-          cat /home/runner/.npm/_logs/*
-        fi
-      continue-on-error: true  # Continue even if this step encounters errors
