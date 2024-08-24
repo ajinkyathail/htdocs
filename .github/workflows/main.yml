@@ -24,4 +24,4 @@ jobs:
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        lftp -c "open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST; mirror -R ./ /remote-directory"
+        lftp -c "set ssl:verify-certificate no; open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST; mirror -R ./ /remote-directory"
