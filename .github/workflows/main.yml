@@ -8,12 +8,12 @@ jobs:
     name: FTP-Deploy-Action
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v2.1.0
       with:
         fetch-depth: 2
-    - name: 📂 Sync files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+    - name: FTP-Deploy-Action
+      uses: SamKirkland/FTP-Deploy-Action@v3.1.1
       with:
-        server: ftpupload.net
-        username: if0_37166443
-        password: uc24cfJGW8ry6t
+        ftp-server: ftpupload.net
+        ftp-username: if0_37166443
+        ftp-password: uc24cfJGW8ry6t
