@@ -13,12 +13,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Install FTP deployment tool
+    - name: Install FTP deployment tool if not already installed
       run: |
-        sudo apt-get update
-        sudo apt-get install -y lftp
+        if ! command -v lftp &> /dev/null; then
+          echo "lftp not found, installing..."
+          sudo apt-get update
+          sudo apt-get install -y lftp
+        else
+          echo "lftp is already installed"
+        fi
 
-    - name: Deploy entire repository to FTP server
+    - name: Deploy changes to FTP server
       env:
         FTP_HOST: ftpupload.net
         FTP_USERNAME: if0_37166443
@@ -31,5 +36,5 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --reverse --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
+          mirror --reverse --only-newer --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
         "
