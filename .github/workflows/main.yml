@@ -1,4 +1,4 @@
-name: FTP Deployment
+name: 🚀 Deploy website on push
 
 on:
   push:
@@ -6,92 +6,30 @@ on:
       - main  # Change this to the branch you want to trigger deployment from
 
 jobs:
-  ftp-deploy:
+  web-deploy:
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js 16
+      uses: actions/setup-node@v2
       with:
-        fetch-depth: 2  # Fetch the last two commits to allow diff comparison
+        node-version: '16'
 
-    - name: Install FTP deployment tool if not already installed
+    - name: 🔨 Build Project
       run: |
-        if ! command -v lftp &> /dev/null; then
-          echo "lftp not found, installing..."
-          sudo apt-get update
-          sudo apt-get install -y lftp
-        else
-          echo "lftp is already installed"
-        fi
+        npm install
+        npm run build
 
-    - name: Prepare changed files for deployment
-      run: |
-        # Create a temporary directory for changed files
-        mkdir -p changed_files
-
-        # Generate a list of files changed between the last two commits
-        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-        REMOVED_FILES=$(git diff --name-status HEAD~1 HEAD | grep 'D' | cut -f2)
-
-        # Copy changed files to the temporary directory
-        for file in $CHANGED_FILES; do
-          if [ -f "$file" ]; then
-            mkdir -p "changed_files/$(dirname "$file")"
-            cp "$file" "changed_files/$file" || { echo "Failed to copy $file"; exit 1; }
-          else
-            echo "File $file does not exist"
-          fi
-        done
-
-        # Save the list of removed files
-        echo "$REMOVED_FILES" > removed_files.txt
-        echo "Removed files list:"
-        cat removed_files.txt
-
-    - name: Deploy changed files to FTP server
-      env:
-        FTP_HOST: ftpupload.net
-        FTP_USERNAME: if0_37166443
-        FTP_PASSWORD: uc24cfJGW8ry6t
-      run: |
-        lftp -c "
-          set ssl:verify-certificate no;
-          set ftp:ssl-protect-data true;
-          set ftp:ssl-force true;
-          set cmd:default-protocol ftp;
-          set ftp:list-options -a;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Mirror command to upload only the changed files
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/ || { echo 'lftp mirror command failed'; exit 1; }
-        "
-
-    - name: Remove deleted files from FTP server
-      env:
-        FTP_HOST: ftpupload.net
-        FTP_USERNAME: if0_37166443
-        FTP_PASSWORD: uc24cfJGW8ry6t
-      run: |
-        if [ -s removed_files.txt ]; then
-          lftp -c "
-            set ssl:verify-certificate no;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-force true;
-            set cmd:default-protocol ftp;
-            set ftp:list-options -a;
-            open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-            # Read the list of removed files and delete them from the server
-            while read -r file; do
-              if [ -n \"$file\" ]; then
-                echo 'Removing file $file'
-                rm -f \"htdocs/$file\" || { echo 'Failed to remove $file'; exit 1; }
-              fi
-            done < removed_files.txt || { echo 'lftp remove command failed'; exit 1; }
-          "
-        else
-          echo "No files to remove from FTP server"
-        fi
-
-    - name: Cleanup temporary files
-      run: |
-        rm -rf changed_files removed_files.txt || { echo 'Failed to clean up temporary files'; exit 1; }
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ftpupload.net  # Replace with your FTP server
+        username: if0_37166443  # Replace with your FTP username
+        password: uc24cfJGW8ry6t  # Replace with your FTP password
+        local-dir: ./  # Directory to deploy from (root of repo)
+        remote-dir: htdocs/  # Directory to deploy to (specified folder on remote server)
+        delete: true  # Remove files on the server that no longer exist locally
