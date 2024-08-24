@@ -29,12 +29,22 @@ jobs:
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        lftp -c "
-          set ssl:verify-certificate no;
-          set ftp:ssl-protect-data true;
-          set ftp:ssl-force true;
-          set cmd:default-protocol ftp;
-          set ftp:list-options -a;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --reverse --only-newer --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
-        "
+        # Generate a list of files changed in the last commit
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+        
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "No changes detected in the last commit."
+        else
+          echo "Deploying the following changed files:"
+          echo "$CHANGED_FILES"
+          lftp -c "
+            set ssl:verify-certificate no;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-force true;
+            set cmd:default-protocol ftp;
+            set ftp:list-options -a;
+            open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+            # Use the mirror command to upload only changed files
+            mirror --reverse --only-newer --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
+          "
+        fi
