@@ -18,10 +18,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y lftp
 
-    - name: Deploy to FTP server
+    - name: Deploy entire repository to FTP server
       env:
         FTP_HOST: ftpupload.net
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        lftp -c "set ssl:verify-certificate no; open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST; mirror -R ./ /remote-directory"
+        lftp -c "
+          set ssl:verify-certificate no;
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+          mirror --reverse --delete --verbose ./ /remote-directory
+        "
