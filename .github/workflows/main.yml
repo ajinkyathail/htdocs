@@ -29,17 +29,21 @@ jobs:
       run: |
         # Create a temporary directory for changed files
         mkdir -p changed_files
-        
-        # Generate a list of files changed in the last commit
+
+        # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-        
+        REMOVED_FILES=$(git diff --name-status HEAD~1 HEAD | grep 'D' | cut -f2)
+
         # Copy changed files to the temporary directory
         for file in $CHANGED_FILES; do
           if [ -f "$file" ]; then
             mkdir -p "changed_files/$(dirname "$file")"
-            cp "$file" "changed_files/$file"
+            cp "$file" "changed_files/$file" || { echo "Failed to copy $file"; exit 1; }
           fi
         done
+
+        # Save the list of removed files
+        echo "$REMOVED_FILES" > removed_files.txt
 
     - name: Deploy changed files to FTP server
       env:
@@ -54,6 +58,35 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Use the mirror command to upload only the changed files
-          mirror --reverse --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/
+          # Mirror command to upload only the changed files
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/ || { echo 'lftp mirror command failed'; exit 1; }
         "
+
+    - name: Remove deleted files from FTP server
+      env:
+        FTP_HOST: ftpupload.net
+        FTP_USERNAME: if0_37166443
+        FTP_PASSWORD: uc24cfJGW8ry6t
+      run: |
+        if [ -s removed_files.txt ]; then
+          lftp -c "
+            set ssl:verify-certificate no;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-force true;
+            set cmd:default-protocol ftp;
+            set ftp:list-options -a;
+            open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+            # Read the list of removed files and delete them from the server
+            while read -r file; do
+              if [ -n \"$file\" ]; then
+                rm -f \"htdocs/$file\" || { echo 'Failed to remove $file'; exit 1; }
+              fi
+            done < removed_files.txt || { echo 'lftp remove command failed'; exit 1; }
+          "
+        else
+          echo "No files to remove from FTP server"
+        fi
+
+    - name: Cleanup temporary files
+      run: |
+        rm -rf changed_files removed_files.txt || { echo 'Failed to clean up temporary files'; exit 1; }
