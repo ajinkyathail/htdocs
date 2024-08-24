@@ -25,13 +25,28 @@ jobs:
           echo "lftp is already installed"
         fi
 
-    - name: Deploy changes to FTP server
+    - name: Prepare changed files for deployment
+      run: |
+        # Create a temporary directory for changed files
+        mkdir -p changed_files
+        
+        # Generate a list of files changed in the last commit
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+        
+        # Copy changed files to the temporary directory
+        for file in $CHANGED_FILES; do
+          if [ -f "$file" ]; then
+            mkdir -p "changed_files/$(dirname "$file")"
+            cp "$file" "changed_files/$file"
+          fi
+        done
+
+    - name: Deploy changed files to FTP server
       env:
         FTP_HOST: ftpupload.net
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        # Sync only changed files to the FTP server
         lftp -c "
           set ssl:verify-certificate no;
           set ftp:ssl-protect-data true;
@@ -39,6 +54,6 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Use the mirror command to upload only changed files and avoid removing files on the server
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
+          # Use the mirror command to upload only the changed files
+          mirror --reverse --verbose --exclude-glob .git/ --exclude .github/ --no-perms changed_files/ htdocs/
         "
