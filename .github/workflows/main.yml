@@ -31,5 +31,5 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --reverse --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ /remote-directory
+          mirror --reverse --delete --verbose --exclude-glob .git/ --exclude .github/ --no-perms ./ htdocs/
         "
