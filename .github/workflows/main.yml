@@ -39,11 +39,15 @@ jobs:
           if [ -f "$file" ]; then
             mkdir -p "changed_files/$(dirname "$file")"
             cp "$file" "changed_files/$file" || { echo "Failed to copy $file"; exit 1; }
+          else
+            echo "File $file does not exist"
           fi
         done
 
         # Save the list of removed files
         echo "$REMOVED_FILES" > removed_files.txt
+        echo "Removed files list:"
+        cat removed_files.txt
 
     - name: Deploy changed files to FTP server
       env:
@@ -79,6 +83,7 @@ jobs:
             # Read the list of removed files and delete them from the server
             while read -r file; do
               if [ -n \"$file\" ]; then
+                echo 'Removing file $file'
                 rm -f \"htdocs/$file\" || { echo 'Failed to remove $file'; exit 1; }
               fi
             done < removed_files.txt || { echo 'lftp remove command failed'; exit 1; }
