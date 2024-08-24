@@ -1,19 +1,27 @@
-on: 
+name: FTP Deployment
+
+on:
   push:
     branches:
-      - main
-name: Production Deploy
+      - main  # Change this to the branch you want to trigger deployment from
+
 jobs:
-  FTP-Deploy-Action:
-    name: FTP-Deploy-Action
+  ftp-deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v2.1.0
-      with:
-        fetch-depth: 2
-    - name: FTP-Deploy-Action
-      uses: SamKirkland/FTP-Deploy-Action@v3.1.1
-      with:
-        ftp-server: ftpupload.net
-        ftp-username: if0_37166443
-        ftp-password: uc24cfJGW8ry6t
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install FTP deployment tool
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lftp
+
+    - name: Deploy to FTP server
+      env:
+        FTP_HOST: ftpupload.net
+        FTP_USERNAME: if0_37166443
+        FTP_PASSWORD: uc24cfJGW8ry6t
+      run: |
+        lftp -c "open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST; mirror -R ./ /remote-directory"
