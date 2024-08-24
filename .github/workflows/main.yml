@@ -25,27 +25,32 @@ jobs:
           echo "lftp is already installed"
         fi
 
-    - name: Prepare changed and deleted files for deployment
+    - name: Prepare directories for FTP operations
       run: |
-        # Create a temporary directory for changed files
-        mkdir -p htdocs
+        # Create separate directories for changed and deleted files
+        mkdir -p ftp_operations/changed_files
+        mkdir -p ftp_operations/deleted_files
 
+    - name: Prepare changed files for deployment
+      run: |
         # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
-        # Generate a list of files deleted in the last commit
-        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
-
-        # Copy changed files to the htdocs directory
+        # Copy changed files to the changed_files directory
         for file in $CHANGED_FILES; do
           if [ -f "$file" ]; then
-            mkdir -p "htdocs/$(dirname "$file")"
-            cp "$file" "htdocs/$file"
+            mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
+            cp "$file" "ftp_operations/changed_files/$file"
           fi
         done
 
-        # Save deleted files list to a file in the htdocs directory
-        echo "$DELETED_FILES" > htdocs/deleted_files.txt
+    - name: Prepare deleted files for removal
+      run: |
+        # Generate a list of files deleted in the last commit
+        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
+
+        # Save deleted files list to a file in the deleted_files directory
+        echo "$DELETED_FILES" > ftp_operations/deleted_files/deleted_files.txt
 
     - name: Deploy changed files to FTP server
       env:
@@ -61,7 +66,7 @@ jobs:
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           # Mirror command to upload only changed files, preserving existing files
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms htdocs/ htdocs/
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/changed_files/ htdocs/
         "
 
     - name: Remove deleted files from FTP server
@@ -83,4 +88,4 @@ jobs:
               rm -rf htdocs/$file
             "
           fi
-        done < htdocs/deleted_files.txt
+        done < ftp_operations/deleted_files/deleted_files.txt
