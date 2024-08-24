@@ -1,13 +1,16 @@
-on: push
-name: 🚀 Deploy website on push
+on: 
+  push:
+    branches:
+      - main
+name: Production Deploy
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  FTP-Deploy-Action:
+    name: FTP-Deploy-Action
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v4
-    
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
     - name: 📂 Sync files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
