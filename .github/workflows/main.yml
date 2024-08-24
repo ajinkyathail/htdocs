@@ -53,7 +53,7 @@ jobs:
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --reverse --only-newer --verbose \
           --exclude-glob .git/ --exclude-glob .github/ \
-          --exclude-glob default/
+          --exclude-glob default/ \
           --no-perms ftp_operations/changed_files/ htdocs/
         "
 
