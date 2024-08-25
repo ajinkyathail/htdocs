@@ -1,76 +1,67 @@
-name: Manual FTP Pull
+name: FTP Pull
 
 on:
-  workflow_dispatch:  # Allows manual triggering of the workflow
+  push:
+    branches:
+      - main  # Change this to the branch you want to trigger the pull from
 
 jobs:
   ftp-pull:
-    name: Pull from FTP and Commit to GitHub
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout main branch
-      uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v2
       with:
-        ref: main  # Ensure we are checking out the main branch
-
-    - name: Verify .git directory
-      run: |
-        echo "Listing contents of current directory:"
-        ls -la
-        echo "Checking for .git directory:"
-        if [ -d .git ]; then
-          echo ".git directory found."
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
+        fetch-depth: 2  # Fetch the last two commits to allow diff comparison
 
     - name: Install FTP client
-      run: sudo apt-get update && sudo apt-get install -y lftp
-
-    - name: List local files with sizes and modified dates
       run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-        echo "Local files list:"
-        cat local_files.txt
+        if ! command -v lftp &> /dev/null; then
+          echo "lftp not found, installing..."
+          sudo apt-get update
+          sudo apt-get install -y lftp
+        else
+          echo "lftp is already installed"
+        fi
 
-    - name: List remote files with sizes and modified dates
+    - name: Prepare directories for FTP operations
+      run: |
+        mkdir -p ftp_operations/pulled_files
+
+    - name: Pull files from FTP server
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        mkdir -p remote_files
         lftp -c "
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
+          set ftp:ssl-protect-data true;
+          set ftp:ssl-force true;
+          set cmd:default-protocol ftp;
+          set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ remote_files/
+          # Mirror command to download files to local directory
+          mirror --verbose --exclude-glob .git/ --no-perms htdocs/ ftp_operations/pulled_files/
         "
-        find ./remote_files -type f -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
-        echo "Remote files list:"
-        cat remote_files.txt
+
+    - name: List local files with sizes and modified dates
+      run: |
+        find ftp_operations/pulled_files -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        echo "Local files list:"
+        cat local_files.txt
 
     - name: Compare and sync files
       run: |
-        echo "Comparing local and remote files"
-        # Sync files from remote to local
+        echo "Comparing and syncing files"
         while read -r remote_mod_time remote_size remote_path; do
           local_path="./$(basename "$remote_path")"
           local_dir=$(dirname "$local_path")
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-          # Skip Git and .github files and directories
-          if [[ "$local_path" == .git/* || "$local_path" == .github/* ]]; then
-            echo "Skipping file: $local_path"
-            continue
-          fi
-          # Create local directory if not exists
           mkdir -p "$local_dir"
-          # Check if the remote file exists before attempting to copy
-          remote_full_path="./remote_files/$(basename "$remote_path")"
+          remote_full_path="./ftp_operations/pulled_files/$(basename "$remote_path")"
           if [ -f "$remote_full_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
@@ -86,16 +77,11 @@ jobs:
           else
             echo "Remote file does not exist: $remote_full_path"
           fi
-        done < remote_files.txt
+        done < local_files.txt
 
-        # Remove files that are no longer in the remote directory
+        # Remove files that are no longer in the FTP directory
         while read -r local_mod_time local_size local_path; do
-          # Skip Git and .github files and directories
-          if [[ "$local_path" == .git/* || "$local_path" == .github/* ]]; then
-            echo "Skipping file: $local_path"
-            continue
-          fi
-          if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
+          if [ ! -f "./ftp_operations/pulled_files/$(basename "$local_path")" ]; then
             if [ -f "$local_path" ]; then
               echo "Deleting local file: $local_path"
               rm "$local_path"
@@ -105,9 +91,9 @@ jobs:
           fi
         done < local_files.txt
 
-        # Remove files from repo that are not present in remote_files
+        # Remove files from repo that are not present in ftp_operations
         find . -type f -not -path './.git/*' -not -path './.github/*' | while read -r file; do
-          if [ ! -f "./remote_files/$(basename "$file")" ]; then
+          if [ ! -f "./ftp_operations/pulled_files/$(basename "$file")" ]; then
             echo "Removing file from repo: $file"
             git rm "$file"
           fi
@@ -138,7 +124,7 @@ jobs:
       run: |
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync root with FTP server"
+          git commit -m "Sync FTP directory with repository"
           git push origin main
         else
           echo "No changes to commit."
@@ -146,4 +132,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -rf remote_files local_files.txt remote_files.txt
+        rm -rf ftp_operations local_files.txt
