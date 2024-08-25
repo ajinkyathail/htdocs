@@ -36,6 +36,9 @@ jobs:
       run: |
         # Move all files from the temporary directory to the repository root
         rsync -av --delete /tmp/ftp-files/ ./
+      
+        # Remove the temporary directory
+        rm -rf /tmp/ftp-files
 
     - name: Check for changes
       run: |
