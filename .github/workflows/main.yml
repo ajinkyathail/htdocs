@@ -128,13 +128,14 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Check if the special files are staged
-        if git ls-files --stage | grep -q 'local_files.txt'; then
+        # Check if special files are untracked and remove them from staging
+        if [[ -f local_files.txt ]]; then
           git reset local_files.txt
         fi
-        if git ls-files --stage | grep -q 'remote_files.txt'; then
+        if [[ -f remote_files.txt ]]; then
           git reset remote_files.txt
         fi
+        # Remove special files from the index
         git rm --cached local_files.txt remote_files.txt || true
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
@@ -145,4 +146,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -rf local_files.txt remote_files.txt
+        rm -f local_files.txt remote_files.txt
