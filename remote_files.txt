@@ -1,0 +1,10 @@
+1724601436 0 ./remote_files/default/index.html
+1724601436 0 ./remote_files/haihai.html
+1724601436 0 ./remote_files/rt
+1724601436 1 ./remote_files/1234.index
+1724601436 1 ./remote_files/hi.txt
+1724601436 13820 ./remote_files/.ftp-deploy-sync-state.json
+1724601436 16 ./remote_files/try.htrml
+1724601436 380 ./remote_files/index.html
+1724601436 40 ./remote_files/fgdfgfdgdf
+1724601436 47 ./remote_files/TRY SECRERTE
