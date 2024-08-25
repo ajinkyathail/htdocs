@@ -1,6 +1,8 @@
-1724610947 130 ./remote_files.txt
-1724610947 132 ./remote_files/JS/real.php
-1724610947 44 ./remote_files/JS/myscript.js
-1724610947 4935 ./.github/workflows/main.yml
-1724610947 803 ./remote_files/JS/index.html
-1724610970 0 ./local_files.txt
+1724611388 132 ./JS/real.php
+1724611388 132 ./remote_files/JS/real.php
+1724611388 331 ./remote_files.txt
+1724611388 44 ./JS/myscript.js
+1724611388 44 ./remote_files/JS/myscript.js
+1724611388 803 ./JS/index.html
+1724611388 803 ./remote_files/JS/index.html
+1724611399 0 ./local_files.txt
