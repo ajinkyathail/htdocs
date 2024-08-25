@@ -128,8 +128,8 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Exclude the special files from being committed
-        git reset local_files.txt remote_files.txt
+        # Ensure files not to be committed are not staged
+        git rm --cached local_files.txt remote_files.txt
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
           git push origin main
