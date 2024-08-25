@@ -29,6 +29,11 @@ jobs:
           mirror --verbose --delete --only-newer /htdocs/ htdocs/
         "
 
+    - name: Remove extra files from GitHub repo not present on FTP server
+      run: |
+        # Remove files in the local htdocs directory that are not in the FTP server's htdocs directory
+        git ls-files --deleted | xargs git rm
+
     - name: Check for changes in htdocs directory
       run: |
         # Check if there are any changes in the 'htdocs' directory after pulling from FTP
