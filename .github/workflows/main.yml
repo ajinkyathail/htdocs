@@ -66,7 +66,7 @@ jobs:
           echo "Local path: $local_path"
 
           # Skip special files
-          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt || "$local_path" == ./remote_files/* ]]; then
+          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
             continue
           fi
 
@@ -96,10 +96,10 @@ jobs:
 
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt && "$local_path" != ./remote_files/* ]]; then
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if [ ! -f "$local_path" ]; then
               echo "Removing local file that does not exist on remote: $local_path"
-              rm -f "$local_path"
+              git rm "$local_path"
             fi
           fi
         done < local_files.txt
@@ -128,7 +128,6 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Commit all changes
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
           git push origin main
