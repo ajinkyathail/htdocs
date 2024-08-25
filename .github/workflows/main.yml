@@ -6,45 +6,7 @@ on:
       - main  # Change this to the branch you want to trigger deployment from
 
 jobs:
-  ftp-pull:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 2  # Fetch the last two commits for diff comparison
-
-    - name: Install lftp if not already installed
-      run: |
-        sudo apt-get update && sudo apt-get install -y lftp
-
-    - name: Pull files from FTP server
-      env:
-        FTP_HOST: ftpupload.net
-        FTP_USERNAME: if0_37166443
-        FTP_PASSWORD: uc24cfJGW8ry6t
-      run: |
-        lftp -c "
-          set ssl:verify-certificate no;
-          set ftp:ssl-protect-data true;
-          set ftp:ssl-force true;
-          set cmd:default-protocol ftp;
-          set ftp:list-options -a;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --exclude-glob .git/ --exclude-glob .github/ htdocs/ ./ftp_download/
-        "
-
-    - name: Copy downloaded files to repository
-      run: |
-        cp -r ftp_download/. .
-        git config user.name "GitHub Actions"
-        git config user.email "<>"
-        git add .
-        git commit -m "Sync with FTP server"
-
   ftp-deploy:
-    needs: ftp-pull  # This ensures ftp-deploy runs after ftp-pull
     runs-on: ubuntu-latest
 
     steps:
