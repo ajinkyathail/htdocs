@@ -23,18 +23,18 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        # Use lftp to mirror the FTP htdocs directory to the repository root
+        # Use lftp to mirror the FTP htdocs directory to a specific subdirectory in the repository
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --only-newer /htdocs/ ./  # Mirror to the root
+          mirror --verbose --delete --only-newer /htdocs/ ./ftp-content/  # Mirror to a specific subdirectory
         "
 
     - name: Check for changes
       run: |
-        # Check for changes in the repository
+        # Check for changes in the specific directory (ftp-content)
         if [[ -n $(git status --porcelain) ]]; then
           echo "Changes detected. Preparing to push."
         else
@@ -58,7 +58,7 @@ jobs:
 
         # Commit changes if there are any
         if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync repository with FTP server"
+          git commit -m "Sync ftp-content with FTP server"
           git push origin main
         else
           echo "No changes to commit."
