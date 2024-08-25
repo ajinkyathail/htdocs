@@ -1,0 +1,3 @@
+1724605657 132 ftp_operations/pulled_files/JS/real.php
+1724605657 44 ftp_operations/pulled_files/JS/myscript.js
+1724605657 803 ftp_operations/pulled_files/JS/index.html
