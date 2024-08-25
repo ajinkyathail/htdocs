@@ -17,6 +17,13 @@ jobs:
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
+    - name: List files in repository
+      run: |
+        echo "Listing files in the repository:"
+        ls -la
+        echo "Listing files in the current directory:"
+        ls -la
+
     - name: List local files with sizes and modified dates
       run: |
         find . -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
@@ -45,6 +52,8 @@ jobs:
     - name: Compare local and remote files and sync
       run: |
         # Ensure the script is executable
+        echo "Verifying presence of compare_and_sync.sh"
+        ls -la compare_and_sync.sh || { echo "Script not found"; exit 1; }
         chmod +x compare_and_sync.sh
         # Run the custom script
         ./compare_and_sync.sh
