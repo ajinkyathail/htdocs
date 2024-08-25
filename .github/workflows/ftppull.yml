@@ -25,19 +25,19 @@ jobs:
       run: |
         mkdir -p htdocs
         lftp -c "
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate no;
+          set ftp:ssl-force false;
+          set ftp:ssl-protect-data false;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --delete --only-newer /htdocs/ htdocs/
         "
 
-    - name: Check for changes
+    - name: Check for changes in htdocs directory
       run: |
+        # Check if there are any changes in the 'htdocs' directory after pulling from FTP
         if [[ -n $(git status --porcelain htdocs) ]]; then
-          echo "Changes detected. Preparing to push."
+          echo "Changes detected in htdocs. Preparing to push."
         else
-          echo "No changes detected. Exiting."
+          echo "No changes detected in htdocs. Exiting."
           exit 0
         fi
 
@@ -45,11 +45,15 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       run: |
+        # Configure Git user for commit
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
-        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
+        
+        # Stage the changes in the 'htdocs' directory
         git add htdocs/*
-        if [[ -n $(git status --porcelain) ]]; then
+
+        # Check if there are changes to commit
+        if [[ -n $(git diff --staged --quiet) ]]; then
           git commit -m "Sync htdocs with FTP server"
           git push origin main
         else
