@@ -31,7 +31,7 @@ jobs:
 
     - name: List local files with sizes and modified dates
       run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -not -path './remote_files/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
@@ -48,7 +48,7 @@ jobs:
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -not -path './remote_files/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
         cat remote_files.txt
 
@@ -128,7 +128,8 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Ensure files not to be committed are not staged
+        # Exclude files from being committed
+        git reset local_files.txt remote_files.txt
         git rm --cached local_files.txt remote_files.txt
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
