@@ -47,21 +47,22 @@ jobs:
 
     - name: Push changes to GitHub
       env:
-        GITHUB_TOKEN: ${{ secrets.MY_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}  # Updated secret name
       run: |
         # Configure Git
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Action"
+
+        # Set remote URL with PAT for authentication
+        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
 
         # Stage all changes
         git add htdocs/*
 
         # Commit changes if there are any
         if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync htdocs with FTP server"
-          git push origin main
+        git commit -m "Sync htdocs with FTP server"
+        git push origin main
         else
-          echo "No changes to commit."
+        echo "No changes to commit."
         fi
-
-        
