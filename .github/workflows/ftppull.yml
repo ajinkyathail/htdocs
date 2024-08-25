@@ -14,13 +14,16 @@ jobs:
       with:
         ref: main  # Ensure we are checking out the main branch
 
-    - name: Verify Git Repository
+    - name: Verify .git directory
       run: |
-        if [ ! -d .git ]; then
+        echo "Listing contents of current directory:"
+        ls -la
+        echo "Checking for .git directory:"
+        if [ -d .git ]; then
+          echo ".git directory found."
+        else
           echo ".git directory not found. Exiting."
           exit 1
-        else
-          echo ".git directory found."
         fi
 
     - name: Install FTP client
@@ -97,10 +100,10 @@ jobs:
           fi
         done < local_files.txt
 
-    - name: Verify .git directory and Configure Git
+    - name: Configure Git
       run: |
-        echo "Verifying .git directory and configuring Git"
         if [ -d .git ]; then
+          echo "Configuring Git."
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Action"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
