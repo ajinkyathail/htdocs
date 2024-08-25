@@ -27,14 +27,18 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
+        # Create a directory to store remote files list
+        mkdir -p remote_files
+        # Use lftp to list files and their details
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --list-only --verbose --exclude .git/ --exclude .github/ /htdocs/ ./remote_files/
+          lcd remote_files
+          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ .
         "
-        # Generate file list from FTP
+        # Generate file list from the FTP directory
         find ./remote_files -type f -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
 
     - name: Compare file lists and sync modified files
