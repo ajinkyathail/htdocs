@@ -52,18 +52,14 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Compare and sync files
+    - name: Compare and Sync Files
       run: |
         echo "Comparing local and remote files"
-        
-        # Create necessary directories and sync files
+
+        # Sync files from remote to local
         while read -r remote_mod_time remote_size remote_path; do
-          # Extract the directory and file name
           local_path="${remote_path}"
           local_dir=$(dirname "$local_path")
-
-          echo "Processing remote file: $remote_path"
-          echo "Local path: $local_path"
 
           # Skip special files
           if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
@@ -76,21 +72,19 @@ jobs:
             mkdir -p "$local_dir"
           fi
 
-          # Check if the remote file exists before attempting to copy
+          # Check if the remote file exists
           if [ -f "$remote_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Syncing modified file: $local_path"
+                echo "Updating modified file: $local_path"
                 cp "$remote_path" "$local_path"
               fi
             else
-              echo "New file detected: $local_path"
+              echo "Adding new file: $local_path"
               cp "$remote_path" "$local_path"
             fi
-          else
-            echo "Remote file does not exist: $remote_path"
           fi
         done < remote_files.txt
 
@@ -98,8 +92,8 @@ jobs:
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if [ ! -f "$local_path" ]; then
-              echo "Removing local file that does not exist on remote: $local_path"
-              git rm "$local_path"
+              echo "Removing local file not present on remote: $local_path"
+              git rm "$local_path" || true
             fi
           fi
         done < local_files.txt
