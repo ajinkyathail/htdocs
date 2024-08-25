@@ -42,34 +42,10 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Compare local and remote files
+    - name: Compare local and remote files and sync
       run: |
-        if [ -f local_files.txt ] && [ -f remote_files.txt ]; then
-          diff local_files.txt remote_files.txt > file_diff.txt
-          if [ -s file_diff.txt ]; then
-            echo "Differences found. Syncing modified files."
-          else
-            echo "No differences found. Exiting."
-            exit 0
-          fi
-        else
-          echo "One or both file lists are missing. Exiting."
-          exit 1
-        fi
-
-    - name: Sync modified files from FTP
-      env:
-        FTP_HOST: ${{ secrets.FTP_HOST }}
-        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        lftp -c "
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate no;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --only-newer --exclude .git/ --exclude .github/ /htdocs/ ./
-        " || { echo "lftp command failed"; exit 1; }
+        # Custom script to compare files and sync modified ones
+        bash compare_and_sync.sh
 
     - name: Verify .git directory exists
       run: |
