@@ -5,15 +5,14 @@ on:
 
 jobs:
   ftp-pull:
-    name: Pull from FTP and Sync to GitHub
+    name: Pull from FTP and Sync to Repository Root
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v4
       with:
-        repository: org1/repo1  # Replace with your repository
-        ref: refs/heads/main  # Replace with the branch you want to use
+        ref: main  # Specify the branch to sync with
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
@@ -40,7 +39,7 @@ jobs:
 
     - name: Check for changes
       run: |
-        # Check for changes in the repository
+        # Check if there are changes in the repository
         if [[ -n $(git status --porcelain) ]]; then
           echo "Changes detected. Preparing to push."
         else
