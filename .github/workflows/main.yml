@@ -13,20 +13,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Step 2: Install curl (if not already available)
-      - name: Install curl
-        run: sudo apt-get install -y curl
+      # Step 2: Install lftp
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
 
-      # Step 3: Pull data from FTP
+      # Step 3: Sync Files from FTP Server
       - name: Sync Files from FTP Server
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          curl --ftp-ssl --user "$FTP_USERNAME:$FTP_PASSWORD" ftp://$FTP_HOST/path/to/files/* -O
+          lftp -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST -e "set ftp:ssl-force true; set ssl:verify-certificate no; mirror --reverse --delete --verbose / /github/workspace; quit"
 
-      # Step 4: Commit changes to the repository
+      # Step 4: Commit and Push Changes to the Git Repository
       - name: Commit and Push Changes
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
