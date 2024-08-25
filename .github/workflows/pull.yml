@@ -1,9 +1,7 @@
-name: FTP Pull
+name: FTP Pull and Sync
 
 on:
-  push:
-    branches:
-      - main  # Change this to the branch you want to trigger the pull from
+  workflow_dispatch:  # Allows manual triggering of the workflow
 
 jobs:
   ftp-pull:
@@ -67,7 +65,7 @@ jobs:
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Syncing modified file: $local_path"
+                echo "Replacing modified file: $local_path"
                 cp "$remote_full_path" "$local_path"
               fi
             else
@@ -78,30 +76,6 @@ jobs:
             echo "Remote file does not exist: $remote_full_path"
           fi
         done < local_files.txt
-
-        # Remove files that are no longer in the FTP directory
-        while read -r local_mod_time local_size local_path; do
-          if [ ! -f "./ftp_operations/pulled_files/$(basename "$local_path")" ]; then
-            if [ -f "$local_path" ] && [[ "$local_path" != "./local_files.txt" ]]; then
-              echo "Deleting local file: $local_path"
-              rm "$local_path"
-            else
-              echo "Local file does not exist: $local_path"
-            fi
-          fi
-        done < local_files.txt
-
-        # Remove files from repo that are not present in ftp_operations
-        find . -type f -not -path './.git/*' -not -path './.github/*' | while read -r file; do
-          if [ ! -f "./ftp_operations/pulled_files/$(basename "$file")" ]; then
-            if [ -f "$file" ] && [[ "$file" != "./local_files.txt" ]]; then
-              echo "Removing file from repo: $file"
-              git rm "$file"
-            else
-              echo "File not found or is excluded: $file"
-            fi
-          fi
-        done
 
     - name: Configure Git
       run: |
@@ -115,6 +89,10 @@ jobs:
           exit 1
         fi
 
+    - name: Add new and modified files to Git
+      run: |
+        git add -A  # Add all new and modified files to the Git index
+
     - name: Check for changes
       run: |
         if [[ -n $(git status --porcelain) ]]; then
@@ -126,14 +104,10 @@ jobs:
 
     - name: Commit and Push changes
       run: |
-        git add -A
-        if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync FTP directory with repository"
-          git push origin main
-        else
-          echo "No changes to commit."
-        fi
+        git commit -m "Sync FTP directory with repository"
+        git push origin main
 
     - name: Cleanup
       run: |
-        rm -rf ftp_operations local_files.txt
+        rm -rf ftp_operations
+        rm -f local_files.txt  # Remove local_files.txt after use
