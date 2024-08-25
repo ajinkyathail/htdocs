@@ -1,0 +1,411 @@
+{
+    "description": "DO NOT DELETE THIS FILE. This file is used to keep track of which files have been synced in the most recent deployment. If you delete this file a resync will need to be done (which can take a while) - read more: https://github.com/SamKirkland/FTP-Deploy-Action",
+    "version": "1.0.0",
+    "generatedTime": 1724586182616,
+    "data": [
+        {
+            "type": "file",
+            "name": "1234.index",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "SDFSDFSDFS"
+        },
+        {
+            "type": "file",
+            "name": "TRY SECRERTE",
+            "size": 47,
+            "hash": "121bd18dd0ae2c4a649ac7d42d2905cbe471061597a9222f9800aafe7985ce04"
+        },
+        {
+            "type": "folder",
+            "name": "default"
+        },
+        {
+            "type": "file",
+            "name": "fgdfgfdgdf",
+            "size": 40,
+            "hash": "83a8c5118b775a99cb89356506b199f8eab5551fcc1cea44d54830329263ffea"
+        },
+        {
+            "type": "file",
+            "name": "hi.txt",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs"
+        },
+        {
+            "type": "file",
+            "name": "index.html",
+            "size": 388,
+            "hash": "e01f38c9460c88ce83739cc9d8a439591f062417ad979c30756f7e4e2f28292a"
+        },
+        {
+            "type": "file",
+            "name": "rt",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "try.htrml",
+            "size": 16,
+            "hash": "6bea952af822baf15e6bad7dd42ffe5fe417cbf654ea02a4e61cb8ddaecc8c05"
+        },
+        {
+            "type": "file",
+            "name": "SDFSDFSDFS/HTML.HTML",
+            "size": 6,
+            "hash": "6ec2171017d19081ef47f5553b64319c03207490ac7e2c2af1605475080cef0e"
+        },
+        {
+            "type": "file",
+            "name": "default/index.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "default/setting.php",
+            "size": 16,
+            "hash": "ff238c0029c305986002465ef6b652284b116a2a8c7648f402c9b2919542eaad"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/1234.index",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/SDFSDFSDFS"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/TRY SECRERTE",
+            "size": 47,
+            "hash": "121bd18dd0ae2c4a649ac7d42d2905cbe471061597a9222f9800aafe7985ce04"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/default"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/fgdfgfdgdf",
+            "size": 40,
+            "hash": "83a8c5118b775a99cb89356506b199f8eab5551fcc1cea44d54830329263ffea"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/haihai.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/hi.txt",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/index.html",
+            "size": 388,
+            "hash": "e01f38c9460c88ce83739cc9d8a439591f062417ad979c30756f7e4e2f28292a"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/pull1",
+            "size": 3,
+            "hash": "81419166794645e094b8c0998ddd2370cb0dd0188522205402c4804a2469838e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/rt",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/try.htrml",
+            "size": 16,
+            "hash": "6bea952af822baf15e6bad7dd42ffe5fe417cbf654ea02a4e61cb8ddaecc8c05"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/default/index.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/SDFSDFSDFS/HTML.HTML",
+            "size": 6,
+            "hash": "6ec2171017d19081ef47f5553b64319c03207490ac7e2c2af1605475080cef0e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/default/setting.php",
+            "size": 16,
+            "hash": "ff238c0029c305986002465ef6b652284b116a2a8c7648f402c9b2919542eaad"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/1234.index",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/SDFSDFSDFS"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/TRY SECRERTE",
+            "size": 47,
+            "hash": "121bd18dd0ae2c4a649ac7d42d2905cbe471061597a9222f9800aafe7985ce04"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/default"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/fgdfgfdgdf",
+            "size": 40,
+            "hash": "83a8c5118b775a99cb89356506b199f8eab5551fcc1cea44d54830329263ffea"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/haihai.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/hi.txt",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/index.html",
+            "size": 388,
+            "hash": "e01f38c9460c88ce83739cc9d8a439591f062417ad979c30756f7e4e2f28292a"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/pull1",
+            "size": 3,
+            "hash": "81419166794645e094b8c0998ddd2370cb0dd0188522205402c4804a2469838e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/rt",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/try.htrml",
+            "size": 16,
+            "hash": "6bea952af822baf15e6bad7dd42ffe5fe417cbf654ea02a4e61cb8ddaecc8c05"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/SDFSDFSDFS/HTML.HTML",
+            "size": 6,
+            "hash": "6ec2171017d19081ef47f5553b64319c03207490ac7e2c2af1605475080cef0e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/default/index.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/default/setting.php",
+            "size": 16,
+            "hash": "ff238c0029c305986002465ef6b652284b116a2a8c7648f402c9b2919542eaad"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/1234.index",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs/SDFSDFSDFS"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/TRY SECRERTE",
+            "size": 47,
+            "hash": "121bd18dd0ae2c4a649ac7d42d2905cbe471061597a9222f9800aafe7985ce04"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs/default"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/fgdfgfdgdf",
+            "size": 40,
+            "hash": "83a8c5118b775a99cb89356506b199f8eab5551fcc1cea44d54830329263ffea"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/haihai.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/hi.txt",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs/htdocs"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/index.html",
+            "size": 388,
+            "hash": "e01f38c9460c88ce83739cc9d8a439591f062417ad979c30756f7e4e2f28292a"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/pull1",
+            "size": 3,
+            "hash": "81419166794645e094b8c0998ddd2370cb0dd0188522205402c4804a2469838e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/rt",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/try.htrml",
+            "size": 16,
+            "hash": "6bea952af822baf15e6bad7dd42ffe5fe417cbf654ea02a4e61cb8ddaecc8c05"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/SDFSDFSDFS/HTML.HTML",
+            "size": 6,
+            "hash": "6ec2171017d19081ef47f5553b64319c03207490ac7e2c2af1605475080cef0e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/default/index.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/default/setting.php",
+            "size": 16,
+            "hash": "ff238c0029c305986002465ef6b652284b116a2a8c7648f402c9b2919542eaad"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/1234.index",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs/htdocs/SDFSDFSDFS"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/TRY SECRERTE",
+            "size": 47,
+            "hash": "121bd18dd0ae2c4a649ac7d42d2905cbe471061597a9222f9800aafe7985ce04"
+        },
+        {
+            "type": "folder",
+            "name": "htdocs/htdocs/htdocs/htdocs/default"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/fgdfgfdgdf",
+            "size": 40,
+            "hash": "83a8c5118b775a99cb89356506b199f8eab5551fcc1cea44d54830329263ffea"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/haihai.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/hi.txt",
+            "size": 1,
+            "hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/index.html",
+            "size": 388,
+            "hash": "e01f38c9460c88ce83739cc9d8a439591f062417ad979c30756f7e4e2f28292a"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/pull1",
+            "size": 3,
+            "hash": "81419166794645e094b8c0998ddd2370cb0dd0188522205402c4804a2469838e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/rt",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/try.htrml",
+            "size": 16,
+            "hash": "6bea952af822baf15e6bad7dd42ffe5fe417cbf654ea02a4e61cb8ddaecc8c05"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/SDFSDFSDFS/HTML.HTML",
+            "size": 6,
+            "hash": "6ec2171017d19081ef47f5553b64319c03207490ac7e2c2af1605475080cef0e"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/default/index.html",
+            "size": 0,
+            "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+            "type": "file",
+            "name": "htdocs/htdocs/htdocs/htdocs/default/setting.php",
+            "size": 16,
+            "hash": "ff238c0029c305986002465ef6b652284b116a2a8c7648f402c9b2919542eaad"
+        }
+    ]
+}
