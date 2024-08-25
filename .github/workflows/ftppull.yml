@@ -50,10 +50,7 @@ jobs:
         mkdir -p remote_files
 
         # Process remote files list
-        while read -r remote_file; do
-          remote_mod_time=$(echo "$remote_file" | awk '{print $1}')
-          remote_size=$(echo "$remote_file" | awk '{print $2}')
-          remote_path=$(echo "$remote_file" | awk '{print $3}')
+        while read -r remote_mod_time remote_size remote_path; do
           local_path="./$(basename "$remote_path")"
           local_dir=$(dirname "$local_path")
 
@@ -83,10 +80,14 @@ jobs:
         done < remote_files.txt
 
         # Remove files that are no longer in the remote directory
-        while read -r local_file; do
-          if [ ! -f "./remote_files/$(basename "$local_file")" ]; then
-            echo "Deleting local file: $local_file"
-            rm "$local_file"
+        while read -r local_mod_time local_size local_path; do
+          if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
+            if [ -f "$local_path" ]; then
+              echo "Deleting local file: $local_path"
+              rm "$local_path"
+            else
+              echo "Local file does not exist: $local_path"
+            fi
           fi
         done < local_files.txt
 
