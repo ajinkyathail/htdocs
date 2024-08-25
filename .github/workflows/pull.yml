@@ -82,7 +82,7 @@ jobs:
         # Remove files that are no longer in the FTP directory
         while read -r local_mod_time local_size local_path; do
           if [ ! -f "./ftp_operations/pulled_files/$(basename "$local_path")" ]; then
-            if [ -f "$local_path" ]; then
+            if [ -f "$local_path" ] && [[ "$local_path" != "./local_files.txt" ]]; then
               echo "Deleting local file: $local_path"
               rm "$local_path"
             else
@@ -94,8 +94,12 @@ jobs:
         # Remove files from repo that are not present in ftp_operations
         find . -type f -not -path './.git/*' -not -path './.github/*' | while read -r file; do
           if [ ! -f "./ftp_operations/pulled_files/$(basename "$file")" ]; then
-            echo "Removing file from repo: $file"
-            git rm "$file"
+            if [ -f "$file" ] && [[ "$file" != "./local_files.txt" ]]; then
+              echo "Removing file from repo: $file"
+              git rm "$file"
+            else
+              echo "File not found or is excluded: $file"
+            fi
           fi
         done
 
