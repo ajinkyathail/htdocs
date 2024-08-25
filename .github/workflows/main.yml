@@ -31,7 +31,7 @@ jobs:
 
     - name: List local files with sizes and modified dates
       run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -not -path './remote_files/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
@@ -48,7 +48,7 @@ jobs:
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
-        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -not -path './remote_files/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
         cat remote_files.txt
 
@@ -66,7 +66,7 @@ jobs:
           echo "Local path: $local_path"
 
           # Skip special files
-          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
+          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt || "$local_path" == ./remote_files/* ]]; then
             continue
           fi
 
@@ -96,7 +96,7 @@ jobs:
 
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt && "$local_path" != ./remote_files/* ]]; then
             if [ ! -f "$local_path" ]; then
               echo "Removing local file that does not exist on remote: $local_path"
               rm -f "$local_path"
@@ -128,6 +128,8 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
+        # Exclude the special files from being committed
+        git reset local_files.txt remote_files.txt
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
           git push origin main
