@@ -31,8 +31,13 @@ jobs:
 
     - name: Remove extra files from GitHub repo not present on FTP server
       run: |
-        # Remove files in the local htdocs directory that are not in the FTP server's htdocs directory
-        git ls-files --deleted | xargs git rm
+        # Get the list of deleted files and remove them if there are any
+        deleted_files=$(git ls-files --deleted)
+        if [[ -n "$deleted_files" ]]; then
+          echo "$deleted_files" | xargs git rm
+        else
+          echo "No files to remove from Git repository."
+        fi
 
     - name: Check for changes in htdocs directory
       run: |
