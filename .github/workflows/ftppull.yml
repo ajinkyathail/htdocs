@@ -31,7 +31,7 @@ jobs:
 
     - name: List local files with sizes and modified dates
       run: |
-        find . -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
@@ -65,6 +65,12 @@ jobs:
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
 
+          # Skip Git files and directories
+          if [[ "$local_path" == .git/* ]]; then
+            echo "Skipping Git file: $local_path"
+            continue
+          fi
+
           # Create local directory if not exists
           mkdir -p "$local_dir"
 
@@ -90,12 +96,14 @@ jobs:
 
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
-            if [ -f "$local_path" ]; then
-              echo "Deleting local file: $local_path"
-              rm "$local_path"
-            else
-              echo "Local file does not exist: $local_path"
+          if [[ "$local_path" != .git/* ]]; then
+            if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
+              if [ -f "$local_path" ]; then
+                echo "Deleting local file: $local_path"
+                rm "$local_path"
+              else
+                echo "Local file does not exist: $local_path"
+              fi
             fi
           fi
         done < local_files.txt
