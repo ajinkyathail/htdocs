@@ -31,7 +31,7 @@ jobs:
 
     - name: List local files with sizes and modified dates
       run: |
-        find . -type f -not -path './.git/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
@@ -48,34 +48,29 @@ jobs:
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
-        find . -type f -not -path './.git/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
         cat remote_files.txt
 
     - name: Compare and sync files
       run: |
         echo "Comparing local and remote files"
+        
         # Create necessary directories and sync files
         while read -r remote_mod_time remote_size remote_path; do
           # Extract the directory and file name
           local_path="${remote_path}"
           local_dir=$(dirname "$local_path")
-          
+
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-          
-          # Skip Git files, .github folder, and temporary comparison files
-          if [[ "$local_path" == .git/* || "$local_path" == ./.github/* || "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
-            echo "Skipping special file: $local_path"
-            continue
-          fi
-          
+
           # Create the local directory if it doesn't exist
           if [ ! -d "$local_dir" ]; then
             echo "Creating directory: $local_dir"
             mkdir -p "$local_dir"
           fi
-          
+
           # Check if the remote file exists before attempting to copy
           if [ -f "$remote_path" ]; then
             if [ -f "$local_path" ]; then
@@ -98,7 +93,8 @@ jobs:
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if [ ! -f "$local_path" ]; then
-              echo "Local file does not exist: $local_path"
+              echo "Removing local file that does not exist on remote: $local_path"
+              rm -f "$local_path"
             fi
           fi
         done < local_files.txt
