@@ -23,29 +23,31 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        mkdir -p htdocs
+        # Use lftp to mirror the FTP htdocs directory to the root directory of the Git repository
         lftp -c "
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --only-newer /htdocs/ htdocs/
+          mirror --verbose --delete --only-newer /htdocs/ .
         "
 
     - name: Remove extra files from GitHub repo not present on FTP server
       run: |
-        # Get the list of deleted files and remove them if there are any
+        # Get the list of files that have been deleted from the FTP server but are still in the Git repository
         deleted_files=$(git ls-files --deleted)
+        
+        # If there are deleted files, remove them from the Git repository
         if [[ -n "$deleted_files" ]]; then
           echo "$deleted_files" | xargs git rm
         else
           echo "No files to remove from Git repository."
         fi
 
-    - name: Check for changes in htdocs directory
+    - name: Check for changes in the root directory
       run: |
-        # Check if there are any changes in the 'htdocs' directory after pulling from FTP
-        if [[ -n $(git status --porcelain htdocs) ]]; then
-          echo "Changes detected in htdocs. Preparing to push."
+        # Check if there are any changes in the root directory after pulling from FTP
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "Changes detected. Preparing to push."
         else
-          echo "No changes detected in htdocs. Exiting."
+          echo "No changes detected. Exiting."
           exit 0
         fi
 
@@ -57,8 +59,8 @@ jobs:
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
         
-        # Stage all changes in the 'htdocs' directory
-        git add htdocs/*
+        # Stage all changes
+        git add -A
 
         # Commit changes if there are any
         if [[ -n $(git status --porcelain) ]]; then
