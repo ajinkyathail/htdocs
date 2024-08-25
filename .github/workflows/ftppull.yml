@@ -17,21 +17,19 @@ jobs:
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: List local files with timestamps and sizes
+    - name: List local files with sizes and modified dates
       run: |
         find . -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
-    - name: List remote files with timestamps and sizes
+    - name: List remote files with sizes and modified dates
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        # Create a directory to store remote files list
         mkdir -p remote_files
-        # Use lftp to mirror files to the remote_files directory
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
@@ -40,12 +38,11 @@ jobs:
           lcd remote_files
           mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ .
         "
-        # Generate file list from the FTP directory
         find ./remote_files -type f -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Compare local and remote file lists
+    - name: Compare local and remote files
       run: |
         if [ -f local_files.txt ] && [ -f remote_files.txt ]; then
           diff local_files.txt remote_files.txt > file_diff.txt
@@ -66,7 +63,6 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        set -x  # Enable debugging
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
