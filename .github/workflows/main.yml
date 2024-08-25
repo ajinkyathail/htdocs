@@ -1,45 +1,38 @@
-name: FTP Sync
+name: FTP to Git Sync
 
+# Trigger this workflow manually using a dispatch event
 on:
-  workflow_dispatch: # Allows you to manually trigger the workflow
+  workflow_dispatch:
 
 jobs:
-  ftp-sync:
+  ftp_to_git:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Install lftp and rsync
-      run: sudo apt-get update && sudo apt-get install -y lftp rsync
+      # Step 2: Install curl (if not already available)
+      - name: Install curl
+        run: sudo apt-get install -y curl
 
-    - name: Sync FTP to Repository
-      env:
-        FTP_HOST: ${{ secrets.FTP_HOST }}
-        FTP_USER: ${{ secrets.FTP_USERNAME }}
-        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
-        FTP_REMOTE_DIR: /path/to/remote/htdocs
-        LOCAL_DIR: ${{ github.workspace }}
-      run: |
-        # Step 1: Pull the contents from the FTP server to a temporary directory
-        TEMP_DIR=$(mktemp -d)
+      # Step 3: Pull data from FTP
+      - name: Sync Files from FTP Server
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          curl --ftp-ssl --user "$FTP_USERNAME:$FTP_PASSWORD" ftp://$FTP_HOST/path/to/files/* -O
 
-        lftp -c "
-        open -u $FTP_USER,$FTP_PASS $FTP_HOST;
-        mirror --verbose --delete --exclude .git --exclude .github --parallel=10 $FTP_REMOTE_DIR $TEMP_DIR;
-        "
-
-        # Step 2: Sync the downloaded contents with the local Git repository
-        rsync -av --delete --exclude=.git --exclude=.github "$TEMP_DIR/" "$LOCAL_DIR/"
-
-        # Step 3: Clean up the temporary directory
-        rm -rf "$TEMP_DIR"
-
-    - name: Commit and Push Changes
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
-        git add .
-        git commit -m "Sync FTP contents with Git repository" || echo "No changes to commit"
-        git push origin ${{ github.ref }}
+      # Step 4: Commit changes to the repository
+      - name: Commit and Push Changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Sync files from FTP server"
+          git push https://x-access-token:$PAT_TOKEN@github.com/${{ github.repository }} HEAD:main
