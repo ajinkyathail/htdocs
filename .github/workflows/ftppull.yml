@@ -17,13 +17,6 @@ jobs:
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: List files in repository
-      run: |
-        echo "Listing files in the repository:"
-        ls -la
-        echo "Listing files in the current directory:"
-        ls -la
-
     - name: List local files with sizes and modified dates
       run: |
         find . -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
@@ -49,14 +42,45 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Compare local and remote files and sync
+    - name: Compare and sync files
       run: |
-        # Ensure the script is executable
-        echo "Verifying presence of compare_and_sync.sh"
-        ls -la compare_and_sync.sh || { echo "Script not found"; exit 1; }
-        chmod +x compare_and_sync.sh
-        # Run the custom script
-        ./compare_and_sync.sh
+        # Compare local and remote files
+        echo "Comparing local and remote files"
+        
+        # Extract the list of local files
+        while read -r remote_file; do
+          remote_mod_time=$(echo "$remote_file" | awk '{print $1}')
+          remote_size=$(echo "$remote_file" | awk '{print $2}')
+          remote_path=$(echo "$remote_file" | awk '{print $3}')
+
+          # Find corresponding local file
+          local_file=$(echo "$remote_path" | sed 's|./remote_files/||')
+          local_path="./$local_file"
+
+          if [ -f "$local_path" ]; then
+            local_mod_time=$(stat --format='%Y' "$local_path")
+            local_size=$(stat --format='%s' "$local_path")
+
+            # Compare modification time and size
+            if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
+              echo "Syncing modified file: $local_path"
+              mkdir -p "$(dirname "$local_path")"
+              cp "$remote_path" "$local_path"
+            fi
+          else
+            echo "New file detected: $local_path"
+            mkdir -p "$(dirname "$local_path")"
+            cp "$remote_path" "$local_path"
+          fi
+        done < remote_files.txt
+
+        # Remove files that are no longer in the remote directory
+        while read -r local_file; do
+          if [ ! -f "./remote_files/$(basename "$local_file")" ]; then
+            echo "Deleting local file: $local_file"
+            rm "$local_file"
+          fi
+        done < local_files.txt
 
     - name: Verify .git directory exists
       run: |
@@ -95,4 +119,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -rf remote_files local_files.txt remote_files.txt file_diff.txt
+        rm -rf remote_files local_files.txt remote_files.txt
