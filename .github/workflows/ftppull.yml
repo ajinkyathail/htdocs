@@ -63,18 +63,22 @@ jobs:
           # Create local directory if not exists
           mkdir -p "$local_dir"
 
-          # Sync files based on modification time and size
-          if [ -f "$local_path" ]; then
-            local_mod_time=$(stat --format='%Y' "$local_path")
-            local_size=$(stat --format='%s' "$local_path")
+          # Check if the remote file exists before attempting to copy
+          if [ -f "$remote_path" ]; then
+            if [ -f "$local_path" ]; then
+              local_mod_time=$(stat --format='%Y' "$local_path")
+              local_size=$(stat --format='%s' "$local_path")
 
-            if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-              echo "Syncing modified file: $local_path"
+              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
+                echo "Syncing modified file: $local_path"
+                cp "$remote_path" "$local_path"
+              fi
+            else
+              echo "New file detected: $local_path"
               cp "$remote_path" "$local_path"
             fi
           else
-            echo "New file detected: $local_path"
-            cp "$remote_path" "$local_path"
+            echo "Remote file does not exist: $remote_path"
           fi
         done < remote_files.txt
 
