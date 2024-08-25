@@ -1,31 +1,63 @@
-name: FTP Pull and Sync
+name: FTP Deployment
 
 on:
   push:
     branches:
-      - main  # Change this to the branch you want to trigger the action
+      - main  # Change this to the branch you want to trigger deployment from
 
 jobs:
-  ftp-pull:
+  ftp-deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
       with:
-        fetch-depth: 2  # Fetch the last two commits for diff comparison
+        fetch-depth: 2  # Fetch the last two commits to allow diff comparison
 
-    - name: Install lftp if not already installed
+    - name: Install FTP deployment tool if not already installed
       run: |
-        sudo apt-get update && sudo apt-get install -y lftp
+        if ! command -v lftp &> /dev/null; then
+          echo "lftp not found, installing..."
+          sudo apt-get update
+          sudo apt-get install -y lftp
+        else
+          echo "lftp is already installed"
+        fi
 
-    - name: Pull files from FTP server
+    - name: Prepare directories for FTP operations
+      run: |
+        # Create separate directories for changed and deleted files
+        mkdir -p ftp_operations/changed_files
+        mkdir -p ftp_operations/deleted_files
+
+    - name: Prepare changed files for deployment
+      run: |
+        # Generate a list of files changed between the last two commits
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+
+        # Copy changed files to the changed_files directory
+        for file in $CHANGED_FILES; do
+          if [ -f "$file" ]; then
+            mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
+            cp "$file" "ftp_operations/changed_files/$file"
+          fi
+        done
+
+    - name: Prepare deleted files for removal
+      run: |
+        # Generate a list of files deleted in the last commit
+        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
+
+        # Save deleted files list to a file in the deleted_files directory
+        echo "$DELETED_FILES" > ftp_operations/deleted_files/deleted_files.txt
+
+    - name: Deploy changed files to FTP server
       env:
         FTP_HOST: ftpupload.net
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        mkdir -p ftp_download
         lftp -c "
           set ssl:verify-certificate no;
           set ftp:ssl-protect-data true;
@@ -33,26 +65,27 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --exclude-glob .git/ --exclude-glob .github/ htdocs/ ./ftp_download/
+          # Mirror command to upload only changed files, preserving existing files
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ default/ --no-perms ftp_operations/changed_files/ htdocs/
         "
 
-    - name: Check for differences
-      id: check_diff
+    - name: Remove deleted files from FTP server
+      if: success()  # Only run this step if the previous steps were successful
+      env:
+        FTP_HOST: ftpupload.net
+        FTP_USERNAME: if0_37166443
+        FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        cp -r ftp_download/. .
-        if git diff --quiet; then
-          echo "No differences detected."
-          echo "::set-output name=has_changes::false"
-        else
-          echo "Differences detected."
-          echo "::set-output name=has_changes::true"
-        fi
-
-    - name: Commit and push changes if any
-      if: steps.check_diff.outputs.has_changes == 'true'
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
-        git add .
-        git commit -m "Sync with FTP server"
-        git push origin main  # Push changes back to the repository
+        while IFS= read -r file; do
+          if [ -n "$file" ]; then
+            lftp -c "
+              set ssl:verify-certificate no;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-force true;
+              set cmd:default-protocol ftp;
+              set ftp:list-options -a;
+              open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+              rm -rf htdocs/$file
+            "
+          fi
+        done < ftp_operations/deleted_files/deleted_files.txt
