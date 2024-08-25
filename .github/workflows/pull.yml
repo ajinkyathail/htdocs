@@ -25,16 +25,14 @@ jobs:
           echo ".git directory not found. Exiting."
           exit 1
         fi
-
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
     - name: List local files with sizes and modified dates
       run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
-
     - name: List remote files with sizes and modified dates
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -52,35 +50,28 @@ jobs:
         find ./remote_files -type f -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
         cat remote_files.txt
-
     - name: Compare and sync files
       run: |
         echo "Comparing local and remote files"
-
         # Process remote files list
         while read -r remote_mod_time remote_size remote_path; do
           local_path="./$(basename "$remote_path")"
           local_dir=$(dirname "$local_path")
-
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-
-          # Skip Git and .github files and directories
-          if [[ "$local_path" == .git/* || "$local_path" == .github/* ]]; then
-            echo "Skipping file: $local_path"
+          # Skip Git files and directories
+          if [[ "$local_path" == .git/* ]]; then
+            echo "Skipping Git file: $local_path"
             continue
           fi
-
           # Create local directory if not exists
           mkdir -p "$local_dir"
-
           # Check if the remote file exists before attempting to copy
           remote_full_path="./remote_files/$(basename "$remote_path")"
           if [ -f "$remote_full_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
-
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
                 echo "Syncing modified file: $local_path"
                 cp "$remote_full_path" "$local_path"
@@ -93,25 +84,19 @@ jobs:
             echo "Remote file does not exist: $remote_full_path"
           fi
         done < remote_files.txt
-
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          # Skip Git and .github files and directories
-          if [[ "$local_path" == .git/* || "$local_path" == .github/* ]]; then
-            echo "Skipping file: $local_path"
-            continue
-          fi
-
-          if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
-            if [ -f "$local_path" ]; then
-              echo "Deleting local file: $local_path"
-              rm "$local_path"
-            else
-              echo "Local file does not exist: $local_path"
+          if [[ "$local_path" != .git/* ]]; then
+            if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
+              if [ -f "$local_path" ]; then
+                echo "Deleting local file: $local_path"
+                rm "$local_path"
+              else
+                echo "Local file does not exist: $local_path"
+              fi
             fi
           fi
         done < local_files.txt
-
     - name: Configure Git
       run: |
         if [ -d .git ]; then
@@ -123,7 +108,6 @@ jobs:
           echo ".git directory not found. Exiting."
           exit 1
         fi
-
     - name: Check for changes
       run: |
         if [[ -n $(git status --porcelain) ]]; then
@@ -132,7 +116,6 @@ jobs:
           echo "No changes detected. Exiting."
           exit 0
         fi
-
     - name: Commit and Push changes
       run: |
         git add -A
@@ -142,7 +125,6 @@ jobs:
         else
           echo "No changes to commit."
         fi
-
     - name: Cleanup
       run: |
         rm -rf remote_files local_files.txt remote_files.txt
