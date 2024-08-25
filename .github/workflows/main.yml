@@ -1,0 +1,45 @@
+name: FTP Sync
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow
+
+jobs:
+  ftp-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install lftp and rsync
+      run: sudo apt-get update && sudo apt-get install -y lftp rsync
+
+    - name: Sync FTP to Repository
+      env:
+        FTP_HOST: ${{ secrets.FTP_HOST }}
+        FTP_USER: ${{ secrets.FTP_USERNAME }}
+        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+        FTP_REMOTE_DIR: /path/to/remote/htdocs
+        LOCAL_DIR: ${{ github.workspace }}
+      run: |
+        # Step 1: Pull the contents from the FTP server to a temporary directory
+        TEMP_DIR=$(mktemp -d)
+
+        lftp -c "
+        open -u $FTP_USER,$FTP_PASS $FTP_HOST;
+        mirror --verbose --delete --exclude .git --exclude .github --parallel=10 $FTP_REMOTE_DIR $TEMP_DIR;
+        "
+
+        # Step 2: Sync the downloaded contents with the local Git repository
+        rsync -av --delete --exclude=.git --exclude=.github "$TEMP_DIR/" "$LOCAL_DIR/"
+
+        # Step 3: Clean up the temporary directory
+        rm -rf "$TEMP_DIR"
+
+    - name: Commit and Push Changes
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        git add .
+        git commit -m "Sync FTP contents with Git repository" || echo "No changes to commit"
+        git push origin ${{ github.ref }}
