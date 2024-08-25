@@ -1,93 +1,23 @@
-name: FTP Deployment
-
 on:
   push:
     branches:
-      - main  # Change this to the branch you want to trigger deployment from
+      - main  # This specifies the workflow only triggers on the main branch
+
+name: 🚀 Deploy website on push
 
 jobs:
-  ftp-deploy:
+  web-deploy:
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
-        fetch-depth: 2  # Fetch the last two commits to allow diff comparison
-
-    - name: Install FTP deployment tool if not already installed
-      run: |
-        if ! command -v lftp &> /dev/null; then
-          echo "lftp not found, installing..."
-          sudo apt-get update
-          sudo apt-get install -y lftp
-        else
-          echo "lftp is already installed"
-        fi
-
-    - name: Prepare directories for FTP operations
-      run: |
-        # Create separate directories for changed and deleted files
-        mkdir -p ftp_operations/changed_files
-        mkdir -p ftp_operations/deleted_files
-
-    - name: Prepare changed files for deployment
-      run: |
-        # Generate a list of files changed between the last two commits
-        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-
-        # Copy changed files to the changed_files directory, including files without an extension
-        for file in $CHANGED_FILES; do
-          if [ -f "$file" ]; then
-            mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
-            cp "$file" "ftp_operations/changed_files/$file"
-          fi
-        done
-
-    - name: Prepare deleted files for removal
-      run: |
-        # Generate a list of files deleted in the last commit
-        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
-
-        # Save deleted files list to a file in the deleted_files directory, including files without an extension
-        for file in $DELETED_FILES; do
-          echo "$file" >> ftp_operations/deleted_files/deleted_files.txt
-        done
-
-    - name: Deploy changed files to FTP server
-      env:
-        FTP_HOST: ${{ secrets.FTP_HOST }}
-        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        lftp -c "
-          set ssl:verify-certificate no;
-          set ftp:ssl-protect-data true;
-          set ftp:ssl-force true;
-          set cmd:default-protocol ftp;
-          set ftp:list-options -a;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Mirror command to upload only changed files, preserving existing files
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/changed_files/ htdocs/
-        "
-
-    - name: Remove deleted files from FTP server
-      if: success()  # Only run this step if the previous steps were successful
-      env:
-        FTP_HOST: ${{ secrets.FTP_HOST }}
-        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        if [ -f ftp_operations/deleted_files/deleted_files.txt ]; then
-          while IFS= read -r file; do
-            lftp -c "
-              set ssl:verify-certificate no;
-              set ftp:ssl-protect-data true;
-              set ftp:ssl-force true;
-              set cmd:default-protocol ftp;
-              set ftp:list-options -a;
-              open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-              rm -rf htdocs/$file
-            "
-          done < ftp_operations/deleted_files/deleted_files.txt
-        fi
+        server: ${{ secrets.FTP_HOST }}          # FTP server address from secrets
+        username: ${{ secrets.FTP_USERNAME }}    # FTP username from secrets
+        password: ${{ secrets.FTP_PASSWORD }}    # FTP password from secrets
+        server-dir: htdocs/                      # Specify the remote directory as 'htdocs'
