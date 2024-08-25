@@ -112,6 +112,15 @@ jobs:
           fi
         done < local_files.txt
 
+        # Remove files that are in the local repo but not in remote_files
+        # Here we need to make sure we're only removing files from the repo that are not present in the remote_files
+        find . -type f -not -path './.git/*' -not -path './.github/*' | while read -r file; do
+          if [ ! -f "./remote_files/$(basename "$file")" ]; then
+            echo "Removing file from repo: $file"
+            git rm "$file"
+          fi
+        done
+
     - name: Configure Git
       run: |
         if [ -d .git ]; then
