@@ -36,9 +36,9 @@ jobs:
         # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
 
-        # Copy changed files to the changed_files directory, excluding files without an extension
+        # Copy changed files to the changed_files directory, including files without an extension
         for file in $CHANGED_FILES; do
-          if [ -f "$file" ] && [[ "$file" == *.* ]]; then
+          if [ -f "$file" ]; then
             mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
             cp "$file" "ftp_operations/changed_files/$file"
           fi
@@ -49,11 +49,9 @@ jobs:
         # Generate a list of files deleted in the last commit
         DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
 
-        # Save deleted files list to a file in the deleted_files directory, excluding files without an extension
+        # Save deleted files list to a file in the deleted_files directory, including files without an extension
         for file in $DELETED_FILES; do
-          if [[ "$file" == *.* ]]; then
-            echo "$file" >> ftp_operations/deleted_files/deleted_files.txt
-          fi
+          echo "$file" >> ftp_operations/deleted_files/deleted_files.txt
         done
 
     - name: Deploy changed files to FTP server
