@@ -56,31 +56,25 @@ jobs:
     - name: Compare and sync files
       run: |
         echo "Comparing local and remote files"
-
         # Sync files from remote to local
         while read -r remote_mod_time remote_size remote_path; do
           local_path="./$(basename "$remote_path")"
           local_dir=$(dirname "$local_path")
-
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-
           # Skip Git and .github files and directories
           if [[ "$local_path" == .git/* || "$local_path" == .github/* ]]; then
             echo "Skipping file: $local_path"
             continue
           fi
-
           # Create local directory if not exists
           mkdir -p "$local_dir"
-
           # Check if the remote file exists before attempting to copy
           remote_full_path="./remote_files/$(basename "$remote_path")"
           if [ -f "$remote_full_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
-
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
                 echo "Syncing modified file: $local_path"
                 cp "$remote_full_path" "$local_path"
@@ -101,7 +95,6 @@ jobs:
             echo "Skipping file: $local_path"
             continue
           fi
-
           if [ ! -f "./remote_files/$(basename "$local_path")" ]; then
             if [ -f "$local_path" ]; then
               echo "Deleting local file: $local_path"
