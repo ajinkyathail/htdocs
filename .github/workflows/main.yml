@@ -46,7 +46,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ ./
+          mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
         find . -type f -not -path './.git/*' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
@@ -57,36 +57,31 @@ jobs:
         echo "Comparing local and remote files"
         # Process remote files list
         while read -r remote_mod_time remote_size remote_path; do
-          local_path="./$(basename "$remote_path")"
-          local_dir=$(dirname "$local_path")
+          local_path=".$remote_path"
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-          # Skip Git files and directories
-          if [[ "$local_path" == .git/* ]]; then
-            echo "Skipping Git file: $local_path"
+          # Skip Git files, .github folder, and temporary comparison files
+          if [[ "$local_path" == .git/* || "$local_path" == ./.github/* || "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
+            echo "Skipping special file: $local_path"
             continue
           fi
-          # Check if the remote file exists before attempting to copy
-          if [ -f "$remote_path" ]; then
-            if [ -f "$local_path" ]; then
-              local_mod_time=$(stat --format='%Y' "$local_path")
-              local_size=$(stat --format='%s' "$local_path")
-              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Syncing modified file: $local_path"
-                cp "$remote_path" "$local_path"
-              fi
-            else
-              echo "New file detected: $local_path"
+          # Sync files if necessary
+          if [ -f "$local_path" ]; then
+            local_mod_time=$(stat --format='%Y' "$local_path")
+            local_size=$(stat --format='%s' "$local_path")
+            if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
+              echo "Syncing modified file: $local_path"
               cp "$remote_path" "$local_path"
             fi
           else
-            echo "Remote file does not exist: $remote_path"
+            echo "New file detected: $local_path"
+            cp "$remote_path" "$local_path"
           fi
         done < remote_files.txt
 
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* ]]; then
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if [ ! -f "$local_path" ]; then
               echo "Local file does not exist: $local_path"
             fi
