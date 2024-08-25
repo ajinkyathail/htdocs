@@ -14,6 +14,15 @@ jobs:
       with:
         ref: main  # Ensure we are checking out the main branch
 
+    - name: Verify Git Repository
+      run: |
+        if [ ! -d .git ]; then
+          echo ".git directory not found. Exiting."
+          exit 1
+        else
+          echo ".git directory found."
+        fi
+
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
@@ -35,8 +44,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          lcd remote_files
-          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ .
+          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ remote_files/
         "
         find ./remote_files -type f -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
         echo "Remote files list:"
@@ -45,9 +53,6 @@ jobs:
     - name: Compare and sync files
       run: |
         echo "Comparing local and remote files"
-
-        # Ensure remote_files directory is created
-        mkdir -p remote_files
 
         # Process remote files list
         while read -r remote_mod_time remote_size remote_path; do
@@ -61,21 +66,22 @@ jobs:
           mkdir -p "$local_dir"
 
           # Check if the remote file exists before attempting to copy
-          if [ -f "$remote_path" ]; then
+          remote_full_path="./remote_files/$(basename "$remote_path")"
+          if [ -f "$remote_full_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
 
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
                 echo "Syncing modified file: $local_path"
-                cp "$remote_path" "$local_path"
+                cp "$remote_full_path" "$local_path"
               fi
             else
               echo "New file detected: $local_path"
-              cp "$remote_path" "$local_path"
+              cp "$remote_full_path" "$local_path"
             fi
           else
-            echo "Remote file does not exist: $remote_path"
+            echo "Remote file does not exist: $remote_full_path"
           fi
         done < remote_files.txt
 
@@ -90,18 +96,6 @@ jobs:
             fi
           fi
         done < local_files.txt
-
-    - name: Verify .git directory exists
-      run: |
-        if [ ! -d .git ]; then
-          echo "Error: .git directory is missing. Reinitializing Git."
-          git init
-          git remote add origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
-          git fetch origin
-          git checkout main
-        else
-          echo ".git directory exists."
-        fi
 
     - name: Check for changes
       run: |
