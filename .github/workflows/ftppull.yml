@@ -23,22 +23,24 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        # Ensure you are in the GitHub Actions workspace, which is a git repository
+        # Navigate to the GitHub Actions workspace
         cd $GITHUB_WORKSPACE
-
+        
         # Use lftp to mirror the FTP htdocs directory to the root directory of the Git repository
         lftp -c "
+          set ftp:ssl-force false;
+          set ftp:ssl-protect-data false;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --delete --only-newer /htdocs/ .
         "
 
     - name: Remove extra files from GitHub repo not present on FTP server
       run: |
-        # Ensure you are in the GitHub Actions workspace, which is a git repository
+        # Navigate to the GitHub Actions workspace
         cd $GITHUB_WORKSPACE
-
-        # Get the list of files that have been deleted from the FTP server but are still in the Git repository
-        deleted_files=$(git ls-files --deleted)
+        
+        # Check if there are files in the Git repository that were deleted from the FTP server
+        deleted_files=$(git ls-files --others --exclude-standard)
         
         # If there are deleted files, remove them from the Git repository
         if [[ -n "$deleted_files" ]]; then
@@ -49,9 +51,9 @@ jobs:
 
     - name: Check for changes in the root directory
       run: |
-        # Ensure you are in the GitHub Actions workspace, which is a git repository
+        # Navigate to the GitHub Actions workspace
         cd $GITHUB_WORKSPACE
-
+        
         # Check if there are any changes in the root directory after pulling from FTP
         if [[ -n $(git status --porcelain) ]]; then
           echo "Changes detected. Preparing to push."
@@ -64,9 +66,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
       run: |
-        # Ensure you are in the GitHub Actions workspace, which is a git repository
+        # Navigate to the GitHub Actions workspace
         cd $GITHUB_WORKSPACE
-
+        
         # Configure Git user for commit
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
