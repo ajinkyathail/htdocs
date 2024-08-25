@@ -56,13 +56,13 @@ jobs:
         # Set remote URL with PAT for authentication
         git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
 
-        # Stage all changes
-        git add htdocs/*
+        # Stage all changes including deletions
+        git add -A
 
         # Commit changes if there are any
         if [[ -n $(git status --porcelain) ]]; then
-        git commit -m "Sync htdocs with FTP server"
-        git push origin main
+          git commit -m "Sync htdocs with FTP server"
+          git push origin main
         else
-        echo "No changes to commitss."
+          echo "No changes to commit."
         fi
