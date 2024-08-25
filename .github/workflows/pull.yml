@@ -136,5 +136,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -rf ftp_operations
-        rm -f local_files.txt  # Remove local_files.txt after use
+        rm -rf ftp_operations local_files.txt
