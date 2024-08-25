@@ -44,8 +44,10 @@ jobs:
 
     - name: Compare local and remote files and sync
       run: |
-        # Custom script to compare files and sync modified ones
-        bash compare_and_sync.sh
+        # Ensure the script is executable
+        chmod +x compare_and_sync.sh
+        # Run the custom script
+        ./compare_and_sync.sh
 
     - name: Verify .git directory exists
       run: |
