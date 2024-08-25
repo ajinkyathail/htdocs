@@ -64,5 +64,5 @@ jobs:
         git commit -m "Sync htdocs with FTP server"
         git push origin main
         else
-        echo "No changes to commits."
+        echo "No changes to commitss."
         fi
