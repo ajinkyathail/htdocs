@@ -1,0 +1,68 @@
+name: Manual FTP Pull
+
+on:
+  workflow_dispatch:  # Allows manual triggering of the workflow
+
+jobs:
+  ftp-pull:
+    name: Pull from FTP and Commit to GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v4
+      with:
+        ref: main  # Ensure we are checking out the main branch
+
+    - name: Install FTP client
+      run: sudo apt-get update && sudo apt-get install -y lftp
+
+    - name: Pull files from FTP server (htdocs)
+      env:
+        FTP_HOST: ${{ secrets.FTP_HOST }}
+        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        # Create a directory to store FTP downloads
+        mkdir -p htdocs
+        
+        # Use lftp to mirror the FTP htdocs directory to the local htdocs directory
+        lftp -c "
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate no;
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+          mirror --verbose --delete --only-newer /htdocs/ htdocs/
+        "
+
+    - name: Check for changes
+      run: |
+        # Check for changes in the htdocs directory
+        if [[ -n $(git status --porcelain htdocs) ]]; then
+          echo "Changes detected. Preparing to push."
+        else
+          echo "No changes detected. Exiting."
+          exit 0
+        fi
+
+    - name: Push changes to GitHub
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}  # Updated secret name
+      run: |
+        # Configure Git
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
+
+        # Set remote URL with PAT for authentication
+        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
+
+        # Stage all changes
+        git add htdocs/*
+
+        # Commit changes if there are any
+        if [[ -n $(git status --porcelain) ]]; then
+        git commit -m "Sync htdocs with FTP server"
+        git push origin main
+        else
+        echo "No changes to commitss."
+        fi
