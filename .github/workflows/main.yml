@@ -128,14 +128,7 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Exclude special files from being committed
-        if git ls-files --stage | grep -q 'local_files.txt'; then
-          git reset local_files.txt || true
-        fi
-        if git ls-files --stage | grep -q 'remote_files.txt'; then
-          git reset remote_files.txt || true
-        fi
-        git rm --cached local_files.txt remote_files.txt || true
+        # Commit all changes
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
           git push origin main
@@ -145,4 +138,5 @@ jobs:
 
     - name: Cleanup
       run: |
+        # Remove special files after committing
         rm -f local_files.txt remote_files.txt
