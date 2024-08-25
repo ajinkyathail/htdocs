@@ -66,7 +66,7 @@ jobs:
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           # Mirror command to upload only changed files, preserving existing files
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/changed_files/ htdocs/
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ default/ --no-perms ftp_operations/changed_files/ htdocs/
         "
 
     - name: Remove deleted files from FTP server
