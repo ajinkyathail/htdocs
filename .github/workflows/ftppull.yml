@@ -34,7 +34,10 @@ jobs:
 
     - name: Clean Git repository and Sync files to repository root
       run: |
-        # Remove all files and directories in the Git repository except for the .git directory
+        # Make sure we are in the correct directory
+        cd $GITHUB_WORKSPACE
+
+        # Remove all files and directories in the Git repository root except for .git directory
         find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 
         # Move all files from the temporary directory to the repository root
