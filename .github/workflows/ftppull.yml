@@ -29,7 +29,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --only-newer --exclude .git/ /htdocs/ ./  # Exclude .git directory
+          mirror --verbose --delete --only-newer --exclude .git/ --exclude .github/ /htdocs/ ./  # Exclude .git and .github directories
         "
 
     - name: Verify .git directory exists
