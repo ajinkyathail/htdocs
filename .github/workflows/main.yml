@@ -128,14 +128,9 @@ jobs:
     - name: Commit and Push changes
       run: |
         git add -A
-        # Check if special files are untracked and remove them from staging
-        if [[ -f local_files.txt ]]; then
-          git reset local_files.txt
-        fi
-        if [[ -f remote_files.txt ]]; then
-          git reset remote_files.txt
-        fi
-        # Remove special files from the index
+        # Exclude special files from being committed
+        git reset local_files.txt || true
+        git reset remote_files.txt || true
         git rm --cached local_files.txt remote_files.txt || true
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
