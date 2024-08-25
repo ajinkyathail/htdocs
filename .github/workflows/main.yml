@@ -129,8 +129,12 @@ jobs:
       run: |
         git add -A
         # Exclude special files from being committed
-        git reset local_files.txt || true
-        git reset remote_files.txt || true
+        if git ls-files --stage | grep -q 'local_files.txt'; then
+          git reset local_files.txt || true
+        fi
+        if git ls-files --stage | grep -q 'remote_files.txt'; then
+          git reset remote_files.txt || true
+        fi
         git rm --cached local_files.txt remote_files.txt || true
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
