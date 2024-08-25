@@ -44,32 +44,36 @@ jobs:
 
     - name: Compare and sync files
       run: |
-        # Compare local and remote files
         echo "Comparing local and remote files"
-        
-        # Extract the list of local files
+
+        # Ensure remote_files directory is created
+        mkdir -p remote_files
+
+        # Process remote files list
         while read -r remote_file; do
           remote_mod_time=$(echo "$remote_file" | awk '{print $1}')
           remote_size=$(echo "$remote_file" | awk '{print $2}')
           remote_path=$(echo "$remote_file" | awk '{print $3}')
+          local_path="./$(basename "$remote_path")"
+          local_dir=$(dirname "$local_path")
 
-          # Find corresponding local file
-          local_file=$(echo "$remote_path" | sed 's|./remote_files/||')
-          local_path="./$local_file"
+          echo "Processing remote file: $remote_path"
+          echo "Local path: $local_path"
 
+          # Create local directory if not exists
+          mkdir -p "$local_dir"
+
+          # Sync files based on modification time and size
           if [ -f "$local_path" ]; then
             local_mod_time=$(stat --format='%Y' "$local_path")
             local_size=$(stat --format='%s' "$local_path")
 
-            # Compare modification time and size
             if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
               echo "Syncing modified file: $local_path"
-              mkdir -p "$(dirname "$local_path")"
               cp "$remote_path" "$local_path"
             fi
           else
             echo "New file detected: $local_path"
-            mkdir -p "$(dirname "$local_path")"
             cp "$remote_path" "$local_path"
           fi
         done < remote_files.txt
