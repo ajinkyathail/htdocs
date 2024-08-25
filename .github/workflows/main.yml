@@ -65,6 +65,11 @@ jobs:
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
 
+          # Skip special files
+          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
+            continue
+          fi
+
           # Create the local directory if it doesn't exist
           if [ ! -d "$local_dir" ]; then
             echo "Creating directory: $local_dir"
