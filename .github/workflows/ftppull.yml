@@ -106,12 +106,15 @@ jobs:
           exit 0
         fi
 
+    - name: Set up Git
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
+
     - name: Push changes to GitHub
       env:
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}  # Updated secret name
       run: |
-        git config --global user.email "actions@github.com"
-        git config --global user.name "GitHub Action"
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
