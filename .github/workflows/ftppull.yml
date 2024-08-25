@@ -1,35 +1,67 @@
-name: FTP Deployment
+name: FTP Pull and Sync to Git Root
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  ftp-deploy:
+  ftp-pull:
+    name: Pull from FTP and Sync to GitHub Repository Root
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout the repository
+      uses: actions/checkout@v4
+      with:
+        ref: main  # Checkout the main branch of your repository
 
-      - name: Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
-        with:
-          ftp-server: ${{ secrets.FTP_SERVER }}
-          ftp-username: ${{ secrets.FTP_USERNAME }}
-          ftp-password: ${{ secrets.FTP_PASSWORD }}
-          exclude: |
-            .git*  # Exclude the .git directory to prevent it from being deleted
+    - name: Install FTP client
+      run: sudo apt-get update && sudo apt-get install -y lftp
 
-      - name: Set up Git
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
+    - name: Pull files from FTP server
+      env:
+        FTP_HOST: ${{ secrets.FTP_HOST }}
+        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        # Create a temporary directory to store FTP files
+        mkdir -p /tmp/ftp-files
 
-      - name: Commit and Push Changes
-        run: |
-          git add .
-          git commit -m "Sync htdocs with FTP server" || echo "No changes to commit"
-          git push origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Use lftp to mirror the FTP directory to the temporary directory
+        lftp -c "
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+          mirror --verbose --delete --only-newer /htdocs/ /tmp/ftp-files/
+        "
+
+    - name: Clean Git repository and Sync files to repository root
+      run: |
+        # Make sure we are in the correct directory
+        cd $GITHUB_WORKSPACE
+
+        # Remove all files and directories in the Git repository root except for .git directory
+        find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+        # Move all files from the temporary directory to the repository root
+        rsync -av --delete /tmp/ftp-files/ ./
+
+        # Remove the temporary directory
+        rm -rf /tmp/ftp-files
+
+    - name: Check for changes
+      run: |
+        # Check if there are changes in the repository
+        if [[ -n $(git status --porcelain) ]]; then
+          echo "Changes detected. Preparing to push."
+        else
+          echo "No changes detected. Exiting."
+          exit 0
+        fi
+
+    - name: Commit and push changes
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git add .
+        git commit -m "Sync htdocs with FTP server"
+        git push origin main
