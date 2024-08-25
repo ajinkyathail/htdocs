@@ -13,21 +13,30 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
       with:
-        fetch-depth: 2  # Fetch the last two commits for diff comparison
+        fetch-depth: 2  # Fetch the last two commits to allow diff comparison
 
-    - name: Install lftp if not already installed
+    - name: Install FTP deployment tool if not already installed
       run: |
-        sudo apt-get update && sudo apt-get install -y lftp
+        if ! command -v lftp &> /dev/null; then
+          echo "lftp not found, installing..."
+          sudo apt-get update
+          sudo apt-get install -y lftp
+        else
+          echo "lftp is already installed"
+        fi
 
-    - name: Prepare files for FTP operations
+    - name: Prepare directories for FTP operations
       run: |
-        mkdir -p ftp_operations/changed_files ftp_operations/deleted_files
-        
-        # Fetch changed and deleted files between the last two commits
+        # Create separate directories for changed and deleted files
+        mkdir -p ftp_operations/changed_files
+        mkdir -p ftp_operations/deleted_files
+
+    - name: Prepare changed files for deployment
+      run: |
+        # Generate a list of files changed between the last two commits
         CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
-        
-        # Process changed files
+
+        # Copy changed files to the changed_files directory
         for file in $CHANGED_FILES; do
           if [ -f "$file" ]; then
             mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
@@ -35,7 +44,12 @@ jobs:
           fi
         done
 
-        # Save deleted files list to a file
+    - name: Prepare deleted files for removal
+      run: |
+        # Generate a list of files deleted in the last commit
+        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
+
+        # Save deleted files list to a file in the deleted_files directory
         echo "$DELETED_FILES" > ftp_operations/deleted_files/deleted_files.txt
 
     - name: Deploy changed files to FTP server
@@ -51,21 +65,19 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --reverse --only-newer --verbose \
-          --exclude-glob .git/ --exclude-glob .github/ \
-          --exclude-glob default/ \
-          --no-perms ftp_operations/changed_files/ htdocs/
+          # Mirror command to upload only changed files, preserving existing files
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/changed_files/ htdocs/
         "
 
     - name: Remove deleted files from FTP server
-      if: success()
+      if: success()  # Only run this step if the previous steps were successful
       env:
         FTP_HOST: ftpupload.net
         FTP_USERNAME: if0_37166443
         FTP_PASSWORD: uc24cfJGW8ry6t
       run: |
-        if [ -f ftp_operations/deleted_files/deleted_files.txt ]; then
-          while IFS= read -r file; do
+        while IFS= read -r file; do
+          if [ -n "$file" ]; then
             lftp -c "
               set ssl:verify-certificate no;
               set ftp:ssl-protect-data true;
@@ -75,5 +87,5 @@ jobs:
               open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
               rm -rf htdocs/$file
             "
-          done < ftp_operations/deleted_files/deleted_files.txt
-        fi
+          fi
+        done < ftp_operations/deleted_files/deleted_files.txt
