@@ -23,10 +23,6 @@ jobs:
           echo "lftp is already installed"
         fi
 
-    - name: Prepare directories for FTP operations
-      run: |
-        mkdir -p ftp_operations/pulled_files
-
     - name: Pull files from FTP server
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -40,13 +36,13 @@ jobs:
           set cmd:default-protocol ftp;
           set ftp:list-options -a;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Mirror command to download files to local directory
-          mirror --verbose --exclude-glob .git/ --no-perms htdocs/ ftp_operations/pulled_files/
+          # Mirror command to download files directly to the Git root directory
+          mirror --verbose --exclude-glob .git/ --no-perms --parallel=10 htdocs/ ./
         "
 
     - name: List local files with sizes and modified dates
       run: |
-        find ftp_operations/pulled_files -type f -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        find . -type f -not -path './.git/*' -not -path './.github/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
@@ -55,11 +51,10 @@ jobs:
         echo "Comparing and syncing files"
         while read -r remote_mod_time remote_size remote_path; do
           local_path="./$(basename "$remote_path")"
-          local_dir=$(dirname "$local_path")
           echo "Processing remote file: $remote_path"
           echo "Local path: $local_path"
-          mkdir -p "$local_dir"
-          remote_full_path="./ftp_operations/pulled_files/$(basename "$remote_path")"
+          # Check if the remote file exists before attempting to copy
+          remote_full_path="$remote_path"
           if [ -f "$remote_full_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
@@ -109,5 +104,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -rf ftp_operations
         rm -f local_files.txt  # Remove local_files.txt after use
