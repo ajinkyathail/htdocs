@@ -24,7 +24,6 @@ jobs:
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
         # Create a directory to store FTP downloads
-        mkdir -p htdocs
         
         # Use lftp to mirror the FTP htdocs directory to the local htdocs directory
         lftp -c "
@@ -32,7 +31,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --delete --only-newer /htdocs/ htdocs/
+          mirror --verbose --delete --only-newer /htdocs/ 
         "
 
     - name: Check for changes
