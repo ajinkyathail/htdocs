@@ -33,7 +33,8 @@ jobs:
         if [ ! -d .git ]; then
           git init
         fi
-        
+
+        # Create and switch to the orphan branch
         git checkout --orphan "$BRANCH_NAME"
         git rm -rf . || true
         
@@ -56,67 +57,12 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+<<<<<<< HEAD
+          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ray/ ./
+=======
           mirror --verbose --exclude .git/ --exclude .github/ --exclude git_action_data/ /htdocs/htdocs/ ./
+>>>>>>> 327658104d37e86c53c04990c00537ae49c5f56c
         "
-
-    - name: Manage Files
-      run: |
-        # List local files with sizes and modified dates
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'git_action_data/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-
-        # List remote files
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
-
-        # Create directory for git action data and move files
-        mkdir -p git_action_data
-        mv local_files.txt remote_files.txt git_action_data/
-        echo "Files moved to git_action_data directory."
-
-    - name: Compare and Sync Files
-      run: |
-        echo "Comparing local and remote files"
-
-        # Sync files from remote to local
-        while read -r remote_mod_time remote_size remote_path; do
-          local_path="${remote_path}"
-          local_dir=$(dirname "$local_path")
-
-          # Skip special files
-          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./git_action_data/* ]]; then
-            continue
-          fi
-
-          # Create the local directory if it doesn't exist
-          if [ ! -d "$local_dir" ]; then
-            echo "Creating directory: $local_dir"
-            mkdir -p "$local_dir"
-          fi
-
-          # Check if the remote file exists
-          if [ -f "$remote_path" ]; then
-            if [ -f "$local_path" ]; then
-              local_mod_time=$(stat --format='%Y' "$local_path")
-              local_size=$(stat --format='%s' "$local_path")
-              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Updating modified file: $local_path"
-                cp "$remote_path" "$local_path"
-              fi
-            else
-              echo "Adding new file: $local_path"
-              cp "$remote_path" "$local_path"
-            fi
-          fi
-        done < git_action_data/remote_files.txt
-
-        # Remove files that are no longer in the remote directory
-        while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./git_action_data/* ]]; then
-            if [ ! -f "$local_path" ]; then
-              echo "Removing local file not present on remote: $local_path"
-              git rm "$local_path" || true
-            fi
-          fi
-        done < git_action_data/local_files.txt
 
     - name: Commit and Push Changes
       run: |
