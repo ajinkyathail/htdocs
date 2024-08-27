@@ -1,7 +1,7 @@
 name: Manual FTP Pull
 
 on:
-  workflow_dispatch:  # Allows manual triggering of the workflow
+  workflow_dispatch:
 
 jobs:
   ftp-pull:
@@ -17,14 +17,16 @@ jobs:
     - name: Generate and Checkout New Branch
       run: |
         # Generate branch name in the format sigtax.com_dd_mm_yyyy_hh_mm_am_pm
-        # Set the timezone to CET and get the current date and time
         BRANCH_NAME="sigtax.com_$(TZ='Europe/Berlin' date '+%d_%m_%Y_%I_%M_%p')"
         echo "Branch name: $BRANCH_NAME"
-        
+
+        # Set the branch name in an environment variable
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
         # Checkout to a new branch
         git checkout -b "$BRANCH_NAME"
         git pull origin dev
-        
+
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
