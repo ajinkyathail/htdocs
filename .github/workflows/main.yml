@@ -53,6 +53,16 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
+    - name: Prepare Files for Git
+      run: |
+        # Create directory for git action data
+        mkdir -p git_action_data
+
+        # Move files to the git action data directory
+        mv local_files.txt git_action_data/
+        mv remote_files.txt git_action_data/
+        echo "Files moved to git_action_data directory."
+
     - name: Compare and Sync Files
       run: |
         echo "Comparing local and remote files"
@@ -63,7 +73,7 @@ jobs:
           local_dir=$(dirname "$local_path")
 
           # Skip special files
-          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./local_files.txt || "$local_path" == ./local_only_files.txt ]]; then
+          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./git_action_data/* ]]; then
             continue
           fi
 
@@ -87,17 +97,17 @@ jobs:
               cp "$remote_path" "$local_path"
             fi
           fi
-        done < remote_files.txt
+        done < git_action_data/remote_files.txt
 
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./local_files.txt && "$local_path" != ./local_only_files.txt ]]; then
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./git_action_data/* ]]; then
             if [ ! -f "$local_path" ]; then
               echo "Removing local file not present on remote: $local_path"
               git rm "$local_path" || true
             fi
           fi
-        done < local_files.txt
+        done < git_action_data/local_files.txt
 
     - name: Configure Git
       run: |
@@ -137,5 +147,5 @@ jobs:
 
     - name: Cleanup
       run: |
-        # Remove special files after committing
-        rm -f local_files.txt remote_files.txt
+        # Remove the directory with files after committing
+        rm -rf git_action_data
