@@ -1,3 +1,4 @@
+
 name: Manual FTP Pull
 
 on:
@@ -88,15 +89,11 @@ jobs:
           fi
         done < remote_files.txt
 
-        # Collect paths of files to keep
-        grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sort > files_to_keep.txt
-
-        # Remove files that are not in FTP
+        # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
-            if ! grep -q "$local_path" files_to_keep.txt; then
+            if [ ! -f "$local_path" ]; then
               echo "Removing local file not present on remote: $local_path"
-              rm -f "$local_path" || true
               git rm "$local_path" || true
             fi
           fi
@@ -136,4 +133,4 @@ jobs:
     - name: Cleanup
       run: |
         # Remove special files after committing
-        rm -f local_files.txt remote_files.txt files_to_keep.txt
+        rm -f local_files.txt remote_files.txt
