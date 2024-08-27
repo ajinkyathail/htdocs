@@ -43,28 +43,32 @@ jobs:
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
 
-    - name: List local files
+    - name: Generate FTP files list
+      env:
+        FTP_HOST: ${{ secrets.FTP_HOST }}
+        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-        echo "Local files list:"
-        cat local_files.txt
-
-    - name: List and compare remote files
-      run: |
-        # Generate the list of files from the FTP server
         echo "Listing files from the FTP server..."
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          ls -R /htdocs/ | awk '{print substr($0, index($0, $9))}' | sed 's/^\.\///' | sort > ftp_files.txt
+          mirror --only-newer --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./ftp_sync/
         "
-
+        find ftp_sync -type f | sed 's/^\.\///' | sort > ftp_files.txt
         echo "FTP files list:"
         cat ftp_files.txt
 
-        # Compare lists
+    - name: List local files
+      run: |
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        echo "Local files list:"
+        cat local_files.txt
+
+    - name: Compare and Sync Files
+      run: |
         echo "Comparing file lists..."
         comm -23 ftp_files.txt local_files.txt > ftp_only_files.txt
         comm -13 ftp_files.txt local_files.txt > local_only_files.txt
@@ -75,19 +79,15 @@ jobs:
         echo "Files only in local repository:"
         cat local_only_files.txt
 
-    - name: Sync files only on FTP to Git
-      run: |
+        # Sync files only on FTP to Git
         while read -r file; do
           if [[ -n "$file" ]]; then
-            if [ ! -f "$file" ]; then
-              echo "Adding new file: $file"
-              git add "$file"
-            fi
+            echo "Adding new file: $file"
+            git add "$file"
           fi
         done < ftp_only_files.txt
 
-    - name: Remove files from Git that are not on FTP
-      run: |
+        # Remove files from Git that are not on FTP
         while read -r file; do
           if [[ -n "$file" ]]; then
             if [ -f "$file" ]; then
@@ -116,4 +116,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        rm -f local_files.txt ftp_files.txt ftp_only_files.txt local_only_files.txt
+        rm -rf ftp_sync local_files.txt ftp_files.txt ftp_only_files.txt local_only_files.txt
