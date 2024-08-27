@@ -1,28 +1,48 @@
-name: FTP to Git Sync
+#!/bin/bash
+set -e
 
-on:
-  workflow_dispatch: # Allows manual trigger of the workflow
+# Environment variables
+FTP_HOST=${FTP_HOST}
+FTP_USER=${FTP_USER}
+FTP_PASSWORD=${FTP_PASSWORD}
+FTP_REMOTE_DIR=${FTP_REMOTE_DIR}
 
-jobs:
-  sync_ftp_to_git:
-    runs-on: ubuntu-latest
+# Directories
+LOCAL_DIR="."
+REMOTE_DIR="ftp_sync"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: main
+# Ensure local directory exists
+mkdir -p $REMOTE_DIR
 
-      - name: Install lftp
-        run: sudo apt-get install -y lftp
+echo "Syncing files from FTP server to local directory..."
 
-      - name: Make sync script executable
-        run: chmod +x sync_and_commit.sh
+# Sync files from FTP to local directory
+lftp -f "
+open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
+mirror --continue --delete --verbose --only-newer --no-empty-dirs $FTP_REMOTE_DIR $REMOTE_DIR
+bye
+"
 
-      - name: Run sync script
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_REMOTE_DIR: htdocs
-        run: ./sync_and_commit.sh
+echo "Sync complete."
+
+# Move synced files to the repository root
+rsync -av --delete $REMOTE_DIR/ $LOCAL_DIR/
+
+# Remove the temporary sync directory
+rm -rf $REMOTE_DIR
+
+echo "Checking for changes in the repository..."
+
+# Configure Git
+git config --local user.email "actions@github.com"
+git config --local user.name "GitHub Actions"
+
+# Check for changes
+if git status --porcelain | grep -q .; then
+  echo "Changes detected."
+  git add --all
+  git diff-index --quiet HEAD || git commit -m "Sync from FTP server"
+  git push origin main
+else
+  echo "No changes detected."
+fi
