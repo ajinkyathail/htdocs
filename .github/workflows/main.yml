@@ -36,9 +36,10 @@ jobs:
         
         git checkout --orphan "$BRANCH_NAME"
         git rm -rf . || true
-        touch .gitignore
-        echo ".gitignore" >> .gitignore
-        git add .gitignore
+        
+        # Create a minimal .gitignore and force add it
+        echo ".gitignore" > .gitignore
+        git add -f .gitignore
         git commit -m "Initial commit on orphan branch"
 
     - name: Install FTP client
