@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout main branch
+    - name: Checkout dev branch
       uses: actions/checkout@v4
       with:
-        ref: main  # Ensure we are checking out the main branch
+        ref: dev  # Ensure we are checking out the dev branch
 
     - name: Verify .git directory
       run: |
@@ -110,9 +110,11 @@ jobs:
           exit 1
         fi
 
-    - name: Create new branch with date and time
+    - name: Create new branch from dev with date and time
       id: create_branch
       run: |
+        git checkout dev  # Ensure we are on the dev branch
+        git pull origin dev  # Pull latest changes from dev
         BRANCH_NAME="sync-$(date +'%Y%m%d-%H%M%S')"
         echo "Creating new branch: $BRANCH_NAME"
         git checkout -b "$BRANCH_NAME"
