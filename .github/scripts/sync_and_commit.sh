@@ -25,4 +25,4 @@ jobs:
           FTP_USER: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_REMOTE_DIR: htdocs
-        run: ./.github/scripts/sync_and_commit.sh
+        run: ./sync_and_commit.sh
