@@ -56,7 +56,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ --exclude git_action_data/ /htdocs/ ./
+          mirror --verbose --exclude .git/ --exclude .github/ --exclude git_action_data/ /htdocs/htdocs/ ./
         "
 
     - name: Manage Files
