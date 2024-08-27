@@ -1,4 +1,3 @@
-
 name: Manual FTP Pull
 
 on:
@@ -92,7 +91,7 @@ jobs:
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
-            if [ ! -f "$local_path" ]; then
+            if ! grep -q "$local_path" remote_files.txt; then
               echo "Removing local file not present on remote: $local_path"
               git rm "$local_path" || true
             fi
