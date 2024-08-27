@@ -110,20 +110,23 @@ jobs:
           exit 1
         fi
 
-    - name: Create new branch from dev with date and time
-      id: create_branch
+    - name: Create and checkout new branch
       run: |
-        git checkout dev  # Ensure we are on the dev branch
-        git pull origin dev  # Pull latest changes from dev
-        BRANCH_NAME="sync-$(date +'%Y%m%d-%H%M%S')"
-        echo "Creating new branch: $BRANCH_NAME"
-        git checkout -b "$BRANCH_NAME"
-        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        echo "Creating a new branch from the dev branch"
+        git checkout -b sync-$(date +'%Y%m%d-%H%M%S')
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+        echo "Checked out new branch: $BRANCH_NAME"
+
+    - name: Exclude unwanted files
+      run: |
+        echo "Excluding specific files and directories from the commit."
+        git rm --cached files_to_keep.txt ftp_files.txt ftp_only_files.txt git_files.txt git_only_files.txt local_files.txt local_only_files.txt || true
+        git rm -r --cached ftp_sync || true
 
     - name: Check for changes
       run: |
         if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected. Preparing to commit and push."
+          echo "Changes detected. Preparing to push."
         else
           echo "No changes detected. Exiting."
           exit 0
@@ -134,7 +137,7 @@ jobs:
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
-          git push origin "${{ env.BRANCH_NAME }}"
+          git push origin "$BRANCH_NAME"
         else
           echo "No changes to commit."
         fi
