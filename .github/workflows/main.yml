@@ -16,28 +16,21 @@ jobs:
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
-      - name: Download files from FTP
+      - name: Sync files directly from FTP
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_REMOTE_DIR: htdocs
-          LOCAL_FTP_DIR: ftp_download
         run: |
-          mkdir -p $LOCAL_FTP_DIR
           lftp -f "
           open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
-          mirror --continue --delete --verbose $FTP_REMOTE_DIR $LOCAL_FTP_DIR
+          mirror --continue --delete --verbose --only-newer --no-empty-dirs --exclude-glob .git/ --exclude-glob .github/ $FTP_REMOTE_DIR .
           bye
           "
 
       - name: Check for changes
         run: |
-          cd ftp_download
-          git init
-          git remote add origin https://github.com/${{ github.repository }}.git
-          git fetch origin main
-          git reset --soft origin/main
           git status --porcelain | tee /tmp/git_status_output
           if [[ ! -s /tmp/git_status_output ]]; then
             echo "No changes detected."
@@ -45,18 +38,6 @@ jobs:
           else
             echo "Changes detected."
           fi
-
-      - name: Sync FTP files to repository
-        run: |
-          rsync -av --delete "ftp_download/" "./" \
-          --exclude '.github' \
-          --exclude '.git' \
-          --exclude '.gitignore' \
-          --exclude '.git/refs/' \
-          --exclude '.git/refs/heads/' \
-          --exclude '.git/refs/remotes/' \
-          --exclude '.git/refs/remotes/origin/' \
-          --exclude '.git/refs/tags/' || true
 
       - name: Commit and push changes
         run: |
