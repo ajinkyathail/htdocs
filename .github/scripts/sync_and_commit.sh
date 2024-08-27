@@ -8,28 +8,28 @@ FTP_PASSWORD=${FTP_PASSWORD}
 FTP_REMOTE_DIR=${FTP_REMOTE_DIR}
 
 # Directories
-LOCAL_DIR="."
-REMOTE_DIR="ftp_sync"
+TEMP_DIR="ftp_sync_temp"
+GIT_ROOT_DIR="."
 
-# Ensure local directory exists
-mkdir -p $REMOTE_DIR
+# Ensure local temporary directory exists
+mkdir -p $TEMP_DIR
 
-echo "Syncing files from FTP server to local directory..."
+echo "Syncing files from FTP server to temporary directory..."
 
 # Sync files from FTP to a temporary directory
 lftp -f "
 open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
-mirror --continue --delete --verbose --only-newer --no-empty-dirs $FTP_REMOTE_DIR $REMOTE_DIR
+mirror --continue --delete --verbose --only-newer --no-empty-dirs $FTP_REMOTE_DIR $TEMP_DIR
 bye
 "
 
 echo "Sync complete."
 
 # Move synced files to the repository root
-rsync -av --exclude '.git' --exclude '.github' --delete $REMOTE_DIR/ $LOCAL_DIR/
+rsync -av --exclude '.git' --exclude '.github' --delete $TEMP_DIR/ $GIT_ROOT_DIR/
 
 # Remove the temporary sync directory
-rm -rf $REMOTE_DIR
+rm -rf $TEMP_DIR
 
 echo "Checking for changes in the repository..."
 
