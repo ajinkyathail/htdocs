@@ -17,7 +17,7 @@ jobs:
         run: sudo apt-get install -y lftp
 
       - name: Make sync script executable
-        run: chmod +x sync_and_commit.sh
+        run: chmod +x .github/scripts/sync_and_commit.sh
 
       - name: Run sync script
         env:
