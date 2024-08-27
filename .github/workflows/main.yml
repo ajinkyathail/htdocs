@@ -13,16 +13,18 @@ jobs:
         with:
           ref: main
 
-      - name: Install lftp
-        run: sudo apt-get install -y lftp
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
 
-      - name: Make sync script executable
-        run: chmod +x .github/scripts/sync_and_commit.sh
+      - name: Install dependencies
+        run: |
+          pip install paramiko gitpython
 
       - name: Run sync script
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_REMOTE_DIR: htdocs
-        run: ./.github/scripts/sync_and_commit.sh
+        run: python ./.github/scripts/sync_and_commit.py
