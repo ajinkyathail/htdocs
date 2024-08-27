@@ -48,19 +48,26 @@ jobs:
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
-        echo "Remote files list:"
-        cat remote_files.txt
+
+        # Generate the list of files from the FTP server
+        echo "Listing files from the FTP server..."
+        lftp -c "
+          set ftp:ssl-force true;
+          set ftp:ssl-protect-data true;
+          set ssl:verify-certificate no;
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+          ls -R /htdocs/ | awk '{print substr($0, index($0, $9))}' | sed 's/^\.\///' | sort > ftp_files.txt
+        "
+
+        echo "FTP files list:"
+        cat ftp_files.txt
+
+        # Compare with local files
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec echo {} \; | sed 's/^\.\///' | sort > git_files.txt
 
     - name: Generate lists and compare
       run: |
-        echo "Generating list of files present on FTP but not in Git repository..."
-
-        # Extract file paths from remote_files.txt
-        awk '{print $3}' remote_files.txt | sed 's/^\.\///' | sort > ftp_files.txt
-
-        # Create list of files in Git repository
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec echo {} \; | sed 's/^\.\///' | sort > git_files.txt
+        echo "Comparing file lists..."
 
         # Find files present on FTP but not in Git repository
         comm -23 ftp_files.txt git_files.txt > ftp_only_files.txt
