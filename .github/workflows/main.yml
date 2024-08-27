@@ -12,23 +12,35 @@ jobs:
     - name: Checkout dev branch
       uses: actions/checkout@v4
       with:
-        ref: dev  # Checkout the dev branch
+        ref: dev  # Ensure we are checking out the dev branch
+
+    - name: Verify .git directory
+      run: |
+        echo "Listing contents of current directory:"
+        ls -la
+        echo "Checking for .git directory:"
+        if [ -d .git ]; then
+          echo ".git directory found."
+        else
+          echo ".git directory not found. Exiting."
+          exit 1
+        fi
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: Create or update .gitignore
+    - name: Generate branch name
+      id: generate_branch_name
       run: |
-        echo "files_to_keep.txt" >> .gitignore
-        echo "ftp_files.txt" >> .gitignore
-        echo "ftp_only_files.txt" >> .gitignore
-        echo "git_files.txt" >> .gitignore
-        echo "git_only_files.txt" >> .gitignore
-        echo "local_files.txt" >> .gitignore
-        echo "local_only_files.txt" >> .gitignore
-        echo "ftp_sync/" >> .gitignore
-        git add .gitignore
-        git commit -m "Update .gitignore to exclude specific files" || true
+        # Set timezone to CET
+        export TZ="Europe/Zurich"
+
+        # Generate the branch name in the desired format
+        BRANCH_NAME="sigtax.com_$(date +"%d_%m_%Y_%I_%M_%p")"
+        echo "Generated branch name: $BRANCH_NAME"
+
+        # Make the branch name available to other steps
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
     - name: List local files with sizes and modified dates
       run: |
@@ -99,6 +111,14 @@ jobs:
           fi
         done < local_files.txt
 
+    - name: Create new branch
+      run: |
+        git checkout dev
+        git pull origin dev
+
+        # Create a new branch using the generated branch name
+        git checkout -b "$BRANCH_NAME"
+
     - name: Configure Git
       run: |
         if [ -d .git ]; then
@@ -111,25 +131,10 @@ jobs:
           exit 1
         fi
 
-    - name: Create and checkout new branch
-      run: |
-        echo "Creating a new branch from the dev branch"
-        git checkout -b sync-$(date +'%Y%m%d-%H%M%S')
-        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-        echo "Checked out new branch: $BRANCH_NAME"
-
-    - name: Check for changes
-      run: |
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected. Preparing to push."
-        else
-          echo "No changes detected. Exiting."
-          exit 0
-        fi
-
     - name: Commit and Push changes
       run: |
         git add -A
+
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
           
@@ -142,8 +147,7 @@ jobs:
           fi
         else
           echo "No changes to commit."
-        fi
-
+          
     - name: Cleanup
       run: |
         # Remove special files after committing
