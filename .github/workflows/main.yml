@@ -56,15 +56,14 @@ jobs:
       run: |
         echo "Generating list of files present on FTP but not in Git repository..."
 
-        # Create a list of files that exist in FTP but not in Git repository
-        grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sed 's/^\.\///' | sort > ftp_only_files.txt
+        # Extract file paths from remote_files.txt
+        awk '{print $3}' remote_files.txt | sed 's/^\.\///' | sort > ftp_files.txt
 
-        # Filter out files that are also present in the Git repository
-        while read -r remote_path; do
-          if [ ! -f "$remote_path" ]; then
-            echo "$remote_path" >> ftp_only_files.txt
-          fi
-        done < remote_files.txt
+        # Create list of files in Git repository
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec echo {} \; | sed 's/^\.\///' | sort > git_files.txt
+
+        # Find files present on FTP but not in Git repository
+        comm -23 ftp_files.txt git_files.txt > ftp_only_files.txt
 
         echo "Files present on FTP but not in Git repository:"
         cat ftp_only_files.txt
@@ -103,4 +102,4 @@ jobs:
     - name: Cleanup
       run: |
         # Remove special files after committing
-        rm -f local_files.txt remote_files.txt ftp_only_files.txt
+        rm -f local_files.txt remote_files.txt ftp_files.txt git_files.txt ftp_only_files.txt
