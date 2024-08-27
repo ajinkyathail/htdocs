@@ -14,18 +14,6 @@ jobs:
       with:
         ref: dev  # Checkout the dev branch
 
-    - name: Verify .git directory
-      run: |
-        echo "Listing contents of current directory:"
-        ls -la
-        echo "Checking for .git directory:"
-        if [ -d .git ]; then
-          echo ".git directory found."
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
-
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
@@ -144,7 +132,14 @@ jobs:
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
-          git push origin "$BRANCH_NAME"
+          
+          # Check if BRANCH_NAME is empty
+          if [[ -z "$BRANCH_NAME" ]]; then
+            echo "Branch name is empty. Exiting with error."
+            exit 1
+          else
+            git push origin "$BRANCH_NAME"
+          fi
         else
           echo "No changes to commit."
         fi
