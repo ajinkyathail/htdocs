@@ -91,7 +91,7 @@ jobs:
         # Collect paths of files to keep
         grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sort > files_to_keep.txt
 
-        # Remove files not in FTP
+        # Remove files that are not in FTP
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if ! grep -q "$local_path" files_to_keep.txt; then
