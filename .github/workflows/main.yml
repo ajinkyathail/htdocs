@@ -1,11 +1,11 @@
-name: Manual FTP Pull
+name: Auto Merge from FTP to Git
 
 on:
   workflow_dispatch:  # Allows manual triggering of the workflow
 
 jobs:
-  ftp-pull:
-    name: Pull from FTP and Commit to GitHub
+  ftp-sync:
+    name: Sync from FTP and Merge to Git
     runs-on: ubuntu-latest
 
     steps:
@@ -29,13 +29,7 @@ jobs:
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: List local files with sizes and modified dates
-      run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-        echo "Local files list:"
-        cat local_files.txt
-
-    - name: List and sync remote files
+    - name: Sync files from FTP
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -49,6 +43,14 @@ jobs:
           mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
         "
 
+    - name: List local files
+      run: |
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        echo "Local files list:"
+        cat local_files.txt
+
+    - name: List and compare remote files
+      run: |
         # Generate the list of files from the FTP server
         echo "Listing files from the FTP server..."
         lftp -c "
@@ -62,62 +64,51 @@ jobs:
         echo "FTP files list:"
         cat ftp_files.txt
 
-        # Compare with local files
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec echo {} \; | sed 's/^\.\///' | sort > git_files.txt
-
-    - name: Generate lists and compare
-      run: |
+        # Compare lists
         echo "Comparing file lists..."
+        comm -23 ftp_files.txt local_files.txt > ftp_only_files.txt
+        comm -13 ftp_files.txt local_files.txt > local_only_files.txt
 
-        # Find files present on FTP but not in Git repository
-        comm -23 ftp_files.txt git_files.txt > ftp_only_files.txt
-        echo "Files present on FTP but not in Git repository:"
+        echo "Files only on FTP server:"
         cat ftp_only_files.txt
 
-        # Find files in Git but not on FTP
-        comm -13 ftp_files.txt git_files.txt > git_only_files.txt
-        echo "Files present in Git but not on FTP:"
-        cat git_only_files.txt
+        echo "Files only in local repository:"
+        cat local_only_files.txt
+
+    - name: Sync files only on FTP to Git
+      run: |
+        while read -r file; do
+          if [[ -n "$file" ]]; then
+            if [ ! -f "$file" ]; then
+              echo "Adding new file: $file"
+              git add "$file"
+            fi
+          fi
+        done < ftp_only_files.txt
 
     - name: Remove files from Git that are not on FTP
       run: |
-        echo "Removing files from Git repository that are not present on FTP server..."
-
         while read -r file; do
-          if [[ "$file" != "" ]]; then
+          if [[ -n "$file" ]]; then
             if [ -f "$file" ]; then
-              echo "Removing $file"
+              echo "Removing file: $file"
               git rm "$file" || true
             fi
           fi
-        done < git_only_files.txt
+        done < local_only_files.txt
 
     - name: Configure Git
       run: |
-        if [ -d .git ]; then
-          echo "Configuring Git."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Action"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
+        echo "Configuring Git."
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
+        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
 
-    - name: Check for changes
-      run: |
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected. Preparing to push."
-        else
-          echo "No changes detected. Exiting."
-          exit 0
-        fi
-
-    - name: Commit and Push changes
+    - name: Commit and push changes
       run: |
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync root with FTP server"
+          git commit -m "Sync with FTP server"
           git push origin main
         else
           echo "No changes to commit."
@@ -125,5 +116,4 @@ jobs:
 
     - name: Cleanup
       run: |
-        # Remove special files after committing
-        rm -f local_files.txt remote_files.txt ftp_files.txt git_files.txt git_only_files.txt
+        rm -f local_files.txt ftp_files.txt ftp_only_files.txt local_only_files.txt
