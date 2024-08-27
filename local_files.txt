@@ -1,0 +1,17 @@
+1724781725 0 ./local_only_files.txt
+1724781725 101 ./ftp_files.txt
+1724781725 101 ./ftp_only_files.txt
+1724781725 132 ./ftp_sync/real.php
+1724781725 132 ./real.php
+1724781725 152 ./git_files.txt
+1724781725 19 ./git_only_files.txt
+1724781725 21664 ./ftp_sync/watch_5.jpg
+1724781725 21664 ./watch_5.jpg
+1724781725 22520 ./ftp_sync/watch_6.jpg
+1724781725 22520 ./watch_6.jpg
+1724781725 23502 ./ftp_sync/watch_7.jpg
+1724781725 23502 ./watch_7.jpg
+1724781725 68 ./files_to_keep.txt
+1724781725 71064 ./watch_8.jpg
+1724781725 785 ./ftp_sync/index.html
+1724781725 785 ./index.html
