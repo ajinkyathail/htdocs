@@ -1,42 +1,44 @@
-name: Manual FTP Pull
+name: Sync FTP to GitHub
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual triggering of the workflow
 
 jobs:
-  ftp-pull:
-    name: Pull from FTP and Commit to GitHub
+  sync-ftp:
+    name: Sync FTP to GitHub
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout dev branch
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: dev  # Ensure we are checking out the dev branch
+        ref: main  # Checkout the main branch to perform any setup, but not used in the final commit.
 
-    - name: Generate and Checkout New Branch
+    - name: Set up Git
       run: |
-        # Generate branch name in the format sigtax.com_dd_mm_yyyy_hh_mm_am_pm
-        BRANCH_NAME="sigtax.com_$(TZ='Europe/Berlin' date '+%d_%m_%Y_%I_%M_%p')"
-        echo "Branch name: $BRANCH_NAME"
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
 
-        # Set the branch name in an environment variable
+    - name: Generate Branch Name
+      id: generate_branch
+      run: |
+        BRANCH_NAME="sigtax.com_$(date -d 'TZ=\"CET\"' '+%d_%m_%Y_%I_%M_%p')"
+        echo "Branch name: $BRANCH_NAME"
         echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
-        # Checkout to a new branch
-        git checkout -b "$BRANCH_NAME"
-        git pull origin dev
+    - name: Create Orphan Branch
+      run: |
+        git checkout --orphan $BRANCH_NAME
+        git rm -rf . || true
+        touch .gitignore
+        echo ".gitignore" >> .gitignore
+        git add .gitignore
+        git commit -m "Initial commit on orphan branch"
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: List local files with sizes and modified dates
-      run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-        echo "Local files list:"
-        cat local_files.txt
-
-    - name: List and sync remote files
+    - name: Sync with FTP server
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -47,105 +49,22 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
+          mirror --verbose --exclude .git/ --exclude .github/ --exclude git_action_data/ /htdocs/ ./
         "
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
-        echo "Remote files list:"
-        cat remote_files.txt
 
-    - name: Prepare Files for Git
+    - name: Manage Files
       run: |
-        # Create directory for git action data
+        # List local files and prepare for comparison
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'git_action_data/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+        
+        # Create the git_action_data directory and move files
         mkdir -p git_action_data
-
-        # Move files to the git action data directory
         mv local_files.txt git_action_data/
-        mv remote_files.txt git_action_data/
-        echo "Files moved to git_action_data directory."
+        
+        # Add and commit changes
+        git add git_action_data/
+        git commit -m "Sync root with FTP server"
 
-    - name: Compare and Sync Files
+    - name: Push Changes
       run: |
-        echo "Comparing local and remote files"
-
-        # Sync files from remote to local
-        while read -r remote_mod_time remote_size remote_path; do
-          local_path="${remote_path}"
-          local_dir=$(dirname "$local_path")
-
-          # Skip special files
-          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./git_action_data/* ]]; then
-            continue
-          fi
-
-          # Create the local directory if it doesn't exist
-          if [ ! -d "$local_dir" ]; then
-            echo "Creating directory: $local_dir"
-            mkdir -p "$local_dir"
-          fi
-
-          # Check if the remote file exists
-          if [ -f "$remote_path" ]; then
-            if [ -f "$local_path" ]; then
-              local_mod_time=$(stat --format='%Y' "$local_path")
-              local_size=$(stat --format='%s' "$local_path")
-              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Updating modified file: $local_path"
-                cp "$remote_path" "$local_path"
-              fi
-            else
-              echo "Adding new file: $local_path"
-              cp "$remote_path" "$local_path"
-            fi
-          fi
-        done < git_action_data/remote_files.txt
-
-        # Remove files that are no longer in the remote directory
-        while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./git_action_data/* ]]; then
-            if [ ! -f "$local_path" ]; then
-              echo "Removing local file not present on remote: $local_path"
-              git rm "$local_path" || true
-            fi
-          fi
-        done < git_action_data/local_files.txt
-
-    - name: Configure Git
-      run: |
-        if [ -d .git ]; then
-          echo "Configuring Git."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Action"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
-
-    - name: Check for changes
-      run: |
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected. Preparing to push."
-        else
-          echo "No changes detected. Exiting."
-          exit 0
-        fi
-
-    - name: Commit and Push changes
-      run: |
-        git add -A
-        if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync root with FTP server"
-          if [[ -z "$BRANCH_NAME" ]]; then
-            echo "Branch name is empty. Exiting with error."
-            exit 1
-          else
-            git push origin "$BRANCH_NAME"
-          fi
-        else
-          echo "No changes to commit."
-        fi
-
-    - name: Cleanup
-      run: |
-        # Remove the directory with files after committing
-        rm -rf git_action_data
+        git push origin $BRANCH_NAME
