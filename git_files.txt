@@ -2,6 +2,7 @@ files_to_keep.txt
 ftp_files.txt
 ftp_only_files.txt
 git_files.txt
+git_only_files.txt
 index.html
 real.php
 watch_5.jpg
