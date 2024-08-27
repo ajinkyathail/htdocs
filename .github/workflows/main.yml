@@ -25,25 +25,24 @@ jobs:
         run: |
           lftp -f "
           open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
-          mirror --continue --delete --verbose --only-newer --no-empty-dirs --exclude-glob .git/ --exclude-glob .github/ $FTP_REMOTE_DIR .
+          mirror --continue --delete --verbose --only-newer --no-empty-dirs --parallel=2 --exclude-glob .git/ --exclude-glob .github/ $FTP_REMOTE_DIR .
           bye
           "
 
-      - name: Check for changes
+      - name: Check for changes and configure Git
         run: |
-          git status --porcelain | tee /tmp/git_status_output
-          if [[ ! -s /tmp/git_status_output ]]; then
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          if git status --porcelain | grep -q .; then
+            echo "Changes detected."
+          else
             echo "No changes detected."
             exit 0
-          else
-            echo "Changes detected."
           fi
 
       - name: Commit and push changes
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add .
+          git add --all
           git commit -m "Sync from FTP server"
           git push origin main
         if: ${{ success() }}
