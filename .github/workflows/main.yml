@@ -12,7 +12,7 @@ jobs:
     - name: Checkout dev branch
       uses: actions/checkout@v4
       with:
-        ref: dev  # Ensure we are checking out the dev branch
+        ref: dev  # Checkout the dev branch
 
     - name: Verify .git directory
       run: |
@@ -28,6 +28,19 @@ jobs:
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
+
+    - name: Create or update .gitignore
+      run: |
+        echo "files_to_keep.txt" >> .gitignore
+        echo "ftp_files.txt" >> .gitignore
+        echo "ftp_only_files.txt" >> .gitignore
+        echo "git_files.txt" >> .gitignore
+        echo "git_only_files.txt" >> .gitignore
+        echo "local_files.txt" >> .gitignore
+        echo "local_only_files.txt" >> .gitignore
+        echo "ftp_sync/" >> .gitignore
+        git add .gitignore
+        git commit -m "Update .gitignore to exclude specific files" || true
 
     - name: List local files with sizes and modified dates
       run: |
@@ -116,12 +129,6 @@ jobs:
         git checkout -b sync-$(date +'%Y%m%d-%H%M%S')
         BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
         echo "Checked out new branch: $BRANCH_NAME"
-
-    - name: Exclude unwanted files
-      run: |
-        echo "Excluding specific files and directories from the commit."
-        git rm --cached files_to_keep.txt ftp_files.txt ftp_only_files.txt git_files.txt git_only_files.txt local_files.txt local_only_files.txt || true
-        git rm -r --cached ftp_sync || true
 
     - name: Check for changes
       run: |
