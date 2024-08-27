@@ -1,42 +1,61 @@
-from ftplib import FTP, error_perm
+from ftplib import FTP
 import os
 
-# FTP connection details (use environment variables for safety)
 FTP_HOST = os.getenv('FTP_HOST')
 FTP_USER = os.getenv('FTP_USER')
 FTP_PASSWORD = os.getenv('FTP_PASSWORD')
-FTP_REMOTE_DIR = 'htdocs'  # Set to the correct directory on the server
-LOCAL_DIR = 'ftp_sync_temp'  # Directory to sync files locally
+FTP_REMOTE_DIR = 'remote_directory'  # Replace with your actual remote directory
+LOCAL_DIR = 'local_directory'  # Replace with your actual local directory
 
-def download_files(remote_dir, local_dir):
+def download_files(ftp, remote_dir, local_dir):
+    # Change to the remote directory
     try:
-        # Check if the remote directory exists
         ftp.cwd(remote_dir)
-    except error_perm as e:
-        print(f"Error: Cannot change directory to {remote_dir}. {e}")
+        os.makedirs(local_dir, exist_ok=True)
+        print(f"Changed to directory: {remote_dir}")
+    except Exception as e:
+        print(f"Error changing directory to {remote_dir}: {e}")
         return
 
-    os.makedirs(local_dir, exist_ok=True)
-    file_list = ftp.nlst()
+    file_list = ftp.nlst()  # Get the list of files
 
     for file_name in file_list:
         local_file = os.path.join(local_dir, file_name)
-        if os.path.isdir(local_file):
-            download_files(file_name, local_file)  # Recursively download subdirectories
-        else:
-            with open(local_file, 'wb') as f:
-                ftp.retrbinary(f'RETR {file_name}', f.write)
-                print(f"Downloaded: {file_name}")
+
+        try:
+            if is_directory(ftp, file_name):
+                # Recursively download subdirectory
+                download_files(ftp, file_name, local_file)
+            else:
+                # Download file
+                print(f"Downloading file: {file_name} to {local_file}")
+                with open(local_file, 'wb') as f:
+                    ftp.retrbinary(f'RETR {file_name}', f.write)
+        except Exception as e:
+            print(f"Error processing {file_name}: {e}")
+
+    # Return to parent directory
+    ftp.cwd('..')
+    print(f"Returned to parent directory")
+
+def is_directory(ftp, file_name):
+    """Check if a file is a directory."""
+    current = ftp.pwd()
+    try:
+        ftp.cwd(file_name)
+        ftp.cwd(current)
+        return True
+    except Exception:
+        return False
 
 def ftp_sync():
-    global ftp
     ftp = FTP(FTP_HOST)
     ftp.login(FTP_USER, FTP_PASSWORD)
+    print("Successfully logged in to FTP server.")
     
-    print("Syncing files from FTP server to local directory...")
-    download_files(FTP_REMOTE_DIR, LOCAL_DIR)
+    download_files(ftp, FTP_REMOTE_DIR, LOCAL_DIR)
+
     ftp.quit()
-    print("Sync complete.")
 
 def main():
     ftp_sync()
