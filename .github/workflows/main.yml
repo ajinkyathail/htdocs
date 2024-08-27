@@ -52,25 +52,22 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Compare and Sync Files
+    - name: Generate list of files only on FTP
       run: |
-        echo "Comparing local and remote files"
+        echo "Generating list of files present on FTP but not in Git repository..."
 
-        # Collect paths of files to keep
-        grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sed 's/^\.\///' | sort > files_to_keep.txt
+        # Create a list of files that exist in FTP but not in Git repository
+        grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sed 's/^\.\///' | sort > ftp_only_files.txt
 
-        # Remove files that are not in FTP
-        while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
-            # Remove leading './' for comparison
-            clean_path=$(echo "$local_path" | sed 's/^\.\///')
-            if ! grep -q "$clean_path" files_to_keep.txt; then
-              echo "Removing local file not present on remote: $local_path"
-              rm -f "$local_path" || true
-              git rm "$local_path" || true
-            fi
+        # Filter out files that are also present in the Git repository
+        while read -r remote_path; do
+          if [ ! -f "$remote_path" ]; then
+            echo "$remote_path" >> ftp_only_files.txt
           fi
-        done < local_files.txt
+        done < remote_files.txt
+
+        echo "Files present on FTP but not in Git repository:"
+        cat ftp_only_files.txt
 
     - name: Configure Git
       run: |
@@ -106,4 +103,4 @@ jobs:
     - name: Cleanup
       run: |
         # Remove special files after committing
-        rm -f local_files.txt remote_files.txt files_to_keep.txt
+        rm -f local_files.txt remote_files.txt ftp_only_files.txt
