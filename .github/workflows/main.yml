@@ -1,4 +1,3 @@
-
 name: Manual FTP Pull
 
 on:
@@ -57,43 +56,17 @@ jobs:
       run: |
         echo "Comparing local and remote files"
 
-        # Sync files from remote to local
-        while read -r remote_mod_time remote_size remote_path; do
-          local_path="${remote_path}"
-          local_dir=$(dirname "$local_path")
+        # Collect paths of files to keep
+        grep -v 'local_files.txt' remote_files.txt | awk '{print $3}' | sed 's/^\.\///' | sort > files_to_keep.txt
 
-          # Skip special files
-          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
-            continue
-          fi
-
-          # Create the local directory if it doesn't exist
-          if [ ! -d "$local_dir" ]; then
-            echo "Creating directory: $local_dir"
-            mkdir -p "$local_dir"
-          fi
-
-          # Check if the remote file exists
-          if [ -f "$remote_path" ]; then
-            if [ -f "$local_path" ]; then
-              local_mod_time=$(stat --format='%Y' "$local_path")
-              local_size=$(stat --format='%s' "$local_path")
-              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Updating modified file: $local_path"
-                cp "$remote_path" "$local_path"
-              fi
-            else
-              echo "Adding new file: $local_path"
-              cp "$remote_path" "$local_path"
-            fi
-          fi
-        done < remote_files.txt
-
-        # Remove files that are no longer in the remote directory
+        # Remove files that are not in FTP
         while read -r local_mod_time local_size local_path; do
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
-            if [ ! -f "$local_path" ]; then
+            # Remove leading './' for comparison
+            clean_path=$(echo "$local_path" | sed 's/^\.\///')
+            if ! grep -q "$clean_path" files_to_keep.txt; then
               echo "Removing local file not present on remote: $local_path"
+              rm -f "$local_path" || true
               git rm "$local_path" || true
             fi
           fi
@@ -133,4 +106,4 @@ jobs:
     - name: Cleanup
       run: |
         # Remove special files after committing
-        rm -f local_files.txt remote_files.txt
+        rm -f local_files.txt remote_files.txt files_to_keep.txt
