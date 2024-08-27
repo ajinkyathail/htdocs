@@ -111,10 +111,12 @@ jobs:
         fi
 
     - name: Create new branch with date and time
+      id: create_branch
       run: |
         BRANCH_NAME="sync-$(date +'%Y%m%d-%H%M%S')"
         echo "Creating new branch: $BRANCH_NAME"
         git checkout -b "$BRANCH_NAME"
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
     - name: Check for changes
       run: |
@@ -130,7 +132,7 @@ jobs:
         git add -A
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
-          git push origin "$BRANCH_NAME"
+          git push origin "${{ env.BRANCH_NAME }}"
         else
           echo "No changes to commit."
         fi
