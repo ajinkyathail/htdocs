@@ -2,6 +2,7 @@ import os
 import ftplib
 import git
 from pathlib import Path
+from datetime import datetime
 
 # Configuration
 FTP_HOST = os.getenv('FTP_HOST')
@@ -28,12 +29,39 @@ def ftp_sync():
             if is_directory(item):
                 download_files(item, local_path)
             else:
-                with open(local_path, 'wb') as f:
-                    ftp.retrbinary('RETR ' + item, f.write)
+                # Check if the file needs to be downloaded
+                if should_download(item, local_path):
+                    print(f"Transferring file '{item}' to '{local_path}'")
+                    with open(local_path, 'wb') as f:
+                        ftp.retrbinary('RETR ' + item, f.write)
+
+    def should_download(remote_file, local_path):
+        """Check if a file should be downloaded based on its size or modification date."""
+        try:
+            remote_size = ftp.size(remote_file)
+            remote_mtime = ftp.sendcmd(f"MDTM {remote_file}")[4:]
+            remote_mtime = datetime.strptime(remote_mtime, "%Y%m%d%H%M%S")
+
+            if os.path.exists(local_path):
+                local_size = os.path.getsize(local_path)
+                local_mtime = datetime.fromtimestamp(os.path.getmtime(local_path))
+
+                if remote_size == local_size and remote_mtime <= local_mtime:
+                    print(f"Skipping '{remote_file}' (no changes detected)")
+                    return False
+
+            return True
+
+        except Exception as e:
+            print(f"Error checking file '{remote_file}': {e}")
+            return True
 
     def is_directory(name):
+        """Check if the name is a directory on the FTP server."""
+        current = ftp.pwd()
         try:
             ftp.cwd(name)
+            ftp.cwd(current)
             return True
         except ftplib.error_perm:
             return False
