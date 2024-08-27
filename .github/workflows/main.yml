@@ -1,135 +1,60 @@
-name: Manual FTP Pull
+name: FTP to Git Sync
 
 on:
-  workflow_dispatch:  # Allows manual triggering of the workflow
+  workflow_dispatch: # Allows manual trigger of the workflow
 
 jobs:
-  ftp-pull:
-    name: Pull from FTP and Commit to GitHub
+  sync_ftp_to_git:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout main branch
-      uses: actions/checkout@v4
-      with:
-        ref: main  # Ensure we are checking out the main branch
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: main
 
-    - name: Verify .git directory
-      run: |
-        echo "Listing contents of current directory:"
-        ls -la
-        echo "Checking for .git directory:"
-        if [ -d .git ]; then
-          echo ".git directory found."
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
 
-    - name: Install FTP client
-      run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Download files from FTP
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_DIR: htdocs
+          LOCAL_FTP_DIR: ftp_download
+        run: |
+          mkdir -p $LOCAL_FTP_DIR
+          lftp -f "
+          open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
+          mirror --continue --delete --verbose $FTP_REMOTE_DIR $LOCAL_FTP_DIR
+          bye
+          "
 
-    - name: List local files with sizes and modified dates
-      run: |
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
-        echo "Local files list:"
-        cat local_files.txt
-
-    - name: List and sync remote files
-      env:
-        FTP_HOST: ${{ secrets.FTP_HOST }}
-        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        lftp -c "
-          set ftp:ssl-force true;
-          set ftp:ssl-protect-data true;
-          set ssl:verify-certificate no;
-          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ --exclude local_files.txt --exclude remote_files.txt /htdocs/ ./
-        "
-        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
-        echo "Remote files list:"
-        cat remote_files.txt
-
-    - name: Compare and Sync Files
-      run: |
-        echo "Comparing local and remote files"
-
-        # Sync files from remote to local
-        while read -r remote_mod_time remote_size remote_path; do
-          local_path="${remote_path}"
-          local_dir=$(dirname "$local_path")
-
-          # Skip special files
-          if [[ "$local_path" == ./local_files.txt || "$local_path" == ./remote_files.txt ]]; then
-            continue
+      - name: Check for changes
+        run: |
+          cd ftp_download
+          git init
+          git remote add origin https://github.com/${{ github.repository }}.git
+          git fetch origin main
+          git reset --soft origin/main
+          git status --porcelain | tee /tmp/git_status_output
+          if [[ ! -s /tmp/git_status_output ]]; then
+            echo "No changes detected."
+            exit 0
+          else
+            echo "Changes detected."
           fi
 
-          # Create the local directory if it doesn't exist
-          if [ ! -d "$local_dir" ]; then
-            echo "Creating directory: $local_dir"
-            mkdir -p "$local_dir"
-          fi
+      - name: Sync FTP files to repository
+        run: |
+          rsync -av --delete "ftp_download/" "./" --exclude '.github'
 
-          # Check if the remote file exists
-          if [ -f "$remote_path" ]; then
-            if [ -f "$local_path" ]; then
-              local_mod_time=$(stat --format='%Y' "$local_path")
-              local_size=$(stat --format='%s' "$local_path")
-              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Updating modified file: $local_path"
-                cp "$remote_path" "$local_path"
-              fi
-            else
-              echo "Adding new file: $local_path"
-              cp "$remote_path" "$local_path"
-            fi
-          fi
-        done < remote_files.txt
-
-        # Remove files that are no longer in the remote directory
-        while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
-            if [ ! -f "$local_path" ]; then
-              echo "Removing local file not present on remote: $local_path"
-              git rm "$local_path" || true
-            fi
-          fi
-        done < local_files.txt
-
-    - name: Configure Git
-      run: |
-        if [ -d .git ]; then
-          echo "Configuring Git."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Action"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
-
-    - name: Check for changes
-      run: |
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected. Preparing to push."
-        else
-          echo "No changes detected. Exiting."
-          exit 0
-        fi
-
-    - name: Commit and Push changes
-      run: |
-        git add -A
-        if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "Sync root with FTP server"
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "Sync from FTP server"
           git push origin main
-        else
-          echo "No changes to commit."
-        fi
-
-    - name: Cleanup
-      run: |
-        # Remove special files after committing
-        rm -f local_files.txt remote_files.txt
+        if: ${{ success() }}
