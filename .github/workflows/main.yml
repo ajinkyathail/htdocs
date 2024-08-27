@@ -25,7 +25,7 @@ jobs:
         run: |
           lftp -f "
           open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
-          mirror --continue --delete --verbose --only-newer --no-empty-dirs --parallel=2 --exclude-glob .git/ --exclude-glob .github/ $FTP_REMOTE_DIR .
+          mirror --continue --delete --verbose --only-newer --no-empty-dirs --exclude-glob .git/ --exclude-glob .github/ $FTP_REMOTE_DIR .
           bye
           "
 
@@ -41,8 +41,8 @@ jobs:
           fi
 
       - name: Commit and push changes
+        if: ${{ success() }}
         run: |
           git add --all
-          git commit -m "Sync from FTP server"
+          git diff-index --quiet HEAD || git commit -m "Sync from FTP server"
           git push origin main
-        if: ${{ success() }}
