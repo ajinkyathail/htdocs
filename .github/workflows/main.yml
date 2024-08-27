@@ -4,18 +4,40 @@ on:
   workflow_dispatch:  # Allows manual triggering of the workflow
 
 jobs:
+<<<<<<< HEAD
+  ftp-sync:
+    name: Sync FTP to GitHub
+=======
   sync-ftp:
     name: Sync FTP to GitHub
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
     runs-on: ubuntu-latest
 
     steps:
+<<<<<<< HEAD
+    - name: Set up Git
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
+=======
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         ref: main  # Checkout the main branch to perform any setup, but not used in the final commit.
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
 
+<<<<<<< HEAD
+    - name: Generate Branch Name
+      id: generate_branch
+=======
     - name: Set up Git
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
       run: |
+<<<<<<< HEAD
+        # Generate branch name in the format sigtax.com_dd_mm_yyyy_hh_mm_am_pm
+        BRANCH_NAME="sigtax.com_$(TZ='Europe/Berlin' date '+%d_%m_%Y_%I_%M_%p')"
+        echo "Branch name: $BRANCH_NAME"
+=======
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Action"
 
@@ -24,8 +46,19 @@ jobs:
       run: |
         BRANCH_NAME="sigtax.com_$(date -d 'TZ=\"CET\"' '+%d_%m_%Y_%I_%M_%p')"
         echo "Branch name: $BRANCH_NAME"
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
         echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
+<<<<<<< HEAD
+    - name: Create Orphan Branch
+      run: |
+        git checkout --orphan "$BRANCH_NAME"
+        git rm -rf . || true
+        touch .gitignore
+        echo ".gitignore" >> .gitignore
+        git add .gitignore
+        git commit -m "Initial commit on orphan branch"
+=======
     - name: Create Orphan Branch
       run: |
         git checkout --orphan $BRANCH_NAME
@@ -34,6 +67,7 @@ jobs:
         echo ".gitignore" >> .gitignore
         git add .gitignore
         git commit -m "Initial commit on orphan branch"
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
@@ -54,6 +88,18 @@ jobs:
 
     - name: Manage Files
       run: |
+<<<<<<< HEAD
+        # List local files with sizes and modified dates
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'git_action_data/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
+
+        # List remote files
+        find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'local_files.txt' -not -name 'remote_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > remote_files.txt
+
+        # Create directory for git action data and move files
+        mkdir -p git_action_data
+        mv local_files.txt remote_files.txt git_action_data/
+        echo "Files moved to git_action_data directory."
+=======
         # List local files and prepare for comparison
         find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'git_action_data/*' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         
@@ -64,7 +110,74 @@ jobs:
         # Add and commit changes
         git add git_action_data/
         git commit -m "Sync root with FTP server"
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
 
     - name: Push Changes
       run: |
         git push origin $BRANCH_NAME
+
+<<<<<<< HEAD
+        # Sync files from remote to local
+        while read -r remote_mod_time remote_size remote_path; do
+          local_path="${remote_path}"
+          local_dir=$(dirname "$local_path")
+
+          # Skip special files
+          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./git_action_data/* ]]; then
+            continue
+          fi
+
+          # Create the local directory if it doesn't exist
+          if [ ! -d "$local_dir" ]; then
+            echo "Creating directory: $local_dir"
+            mkdir -p "$local_dir"
+          fi
+
+          # Check if the remote file exists
+          if [ -f "$remote_path" ]; then
+            if [ -f "$local_path" ]; then
+              local_mod_time=$(stat --format='%Y' "$local_path")
+              local_size=$(stat --format='%s' "$local_path")
+              if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
+                echo "Updating modified file: $local_path"
+                cp "$remote_path" "$local_path"
+              fi
+            else
+              echo "Adding new file: $local_path"
+              cp "$remote_path" "$local_path"
+            fi
+          fi
+        done < git_action_data/remote_files.txt
+
+        # Remove files that are no longer in the remote directory
+        while read -r local_mod_time local_size local_path; do
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./git_action_data/* ]]; then
+            if [ ! -f "$local_path" ]; then
+              echo "Removing local file not present on remote: $local_path"
+              git rm "$local_path" || true
+            fi
+          fi
+        done < git_action_data/local_files.txt
+
+    - name: Commit and Push Changes
+      run: |
+        git add -A
+        if [[ -n $(git status --porcelain) ]]; then
+          git commit -m "Sync root with FTP server"
+          if [[ -z "$BRANCH_NAME" ]]; then
+            echo "Branch name is empty. Exiting with error."
+            exit 1
+          else
+            git push origin "$BRANCH_NAME"
+          fi
+        else
+          echo "No changes to commit."
+        fi
+
+    - name: Cleanup
+      run: |
+        # Remove the directory with files after committing
+        rm -rf git_action_data
+
+=======
+>>>>>>> 29317eafeb001ab58404cfde54130c425cb6289d
