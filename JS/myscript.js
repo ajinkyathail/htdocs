@@ -1,1 +1,0 @@
-document.write("<br> Hello from outer src");
