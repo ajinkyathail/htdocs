@@ -93,6 +93,7 @@ jobs:
           if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./local_files.txt && "$local_path" != ./remote_files.txt ]]; then
             if ! grep -q "$local_path" remote_files.txt; then
               echo "Removing local file not present on remote: $local_path"
+              rm -f "$local_path" || true
               git rm "$local_path" || true
             fi
           fi
