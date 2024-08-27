@@ -52,7 +52,7 @@ jobs:
         echo "Remote files list:"
         cat remote_files.txt
 
-    - name: Generate list of files only on FTP
+    - name: Generate lists and compare
       run: |
         echo "Generating list of files present on FTP but not in Git repository..."
 
@@ -64,9 +64,26 @@ jobs:
 
         # Find files present on FTP but not in Git repository
         comm -23 ftp_files.txt git_files.txt > ftp_only_files.txt
-
         echo "Files present on FTP but not in Git repository:"
         cat ftp_only_files.txt
+
+        # Find files in Git but not on FTP
+        comm -13 ftp_files.txt git_files.txt > git_only_files.txt
+        echo "Files present in Git but not on FTP:"
+        cat git_only_files.txt
+
+    - name: Remove files from Git that are not on FTP
+      run: |
+        echo "Removing files from Git repository that are not present on FTP server..."
+
+        while read -r file; do
+          if [[ "$file" != "" ]]; then
+            if [ -f "$file" ]; then
+              echo "Removing $file"
+              git rm "$file" || true
+            fi
+          fi
+        done < git_only_files.txt
 
     - name: Configure Git
       run: |
@@ -102,4 +119,4 @@ jobs:
     - name: Cleanup
       run: |
         # Remove special files after committing
-        rm -f local_files.txt remote_files.txt ftp_files.txt git_files.txt ftp_only_files.txt
+        rm -f local_files.txt remote_files.txt ftp_files.txt git_files.txt git_only_files.txt
