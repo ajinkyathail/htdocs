@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install paramiko gitpython
+          pip install ftplib gitpython
 
       - name: Run sync script
         env:

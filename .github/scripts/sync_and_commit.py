@@ -1,5 +1,5 @@
 import os
-import paramiko
+import ftplib
 import git
 from pathlib import Path
 
@@ -16,25 +16,30 @@ Path(LOCAL_DIR).mkdir(parents=True, exist_ok=True)
 
 # Connect to the FTP server
 def ftp_sync():
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(FTP_HOST, username=FTP_USER, password=FTP_PASSWORD)
+    ftp = ftplib.FTP(FTP_HOST)
+    ftp.login(user=FTP_USER, passwd=FTP_PASSWORD)
+    ftp.cwd(FTP_REMOTE_DIR)
 
-    sftp = ssh.open_sftp()
-    sftp.chdir(FTP_REMOTE_DIR)
+    def download_files(remote_dir, local_dir):
+        os.makedirs(local_dir, exist_ok=True)
+        ftp.cwd(remote_dir)
+        for item in ftp.nlst():
+            local_path = os.path.join(local_dir, item)
+            if is_directory(item):
+                download_files(item, local_path)
+            else:
+                with open(local_path, 'wb') as f:
+                    ftp.retrbinary('RETR ' + item, f.write)
 
-    # Sync files from FTP to local directory
-    for item in sftp.listdir_attr():
-        remote_path = FTP_REMOTE_DIR + '/' + item.filename
-        local_path = os.path.join(LOCAL_DIR, item.filename)
+    def is_directory(name):
+        try:
+            ftp.cwd(name)
+            return True
+        except ftplib.error_perm:
+            return False
 
-        if stat.S_ISDIR(item.st_mode):
-            Path(local_path).mkdir(parents=True, exist_ok=True)
-        else:
-            sftp.get(remote_path, local_path)
-    
-    sftp.close()
-    ssh.close()
+    download_files(FTP_REMOTE_DIR, LOCAL_DIR)
+    ftp.quit()
 
 # Sync local directory with Git repository
 def git_sync():
