@@ -3,7 +3,7 @@ import os
 
 # FTP connection details (use environment variables for safety)
 FTP_HOST = os.getenv('FTP_HOST')
-FTP_USER = os.getenv('FTP_USERNAME')
+FTP_USER = os.getenv('FTP_USER')
 FTP_PASSWORD = os.getenv('FTP_PASSWORD')
 FTP_REMOTE_DIR = 'htdocs'  # Set to the correct directory on the server
 LOCAL_DIR = 'ftp_sync_temp'  # Directory to sync files locally
