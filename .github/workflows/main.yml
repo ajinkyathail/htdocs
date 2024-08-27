@@ -48,7 +48,15 @@ jobs:
 
       - name: Sync FTP files to repository
         run: |
-          rsync -av --delete "ftp_download/" "./" --exclude '.github'
+          rsync -av --delete "ftp_download/" "./" \
+          --exclude '.github' \
+          --exclude '.git' \
+          --exclude '.gitignore' \
+          --exclude '.git/refs/' \
+          --exclude '.git/refs/heads/' \
+          --exclude '.git/refs/remotes/' \
+          --exclude '.git/refs/remotes/origin/' \
+          --exclude '.git/refs/tags/' || true
 
       - name: Commit and push changes
         run: |
