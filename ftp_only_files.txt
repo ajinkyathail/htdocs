@@ -1,0 +1,5 @@
+ftp_sync/index.html
+ftp_sync/real.php
+ftp_sync/watch_5.jpg
+ftp_sync/watch_6.jpg
+ftp_sync/watch_7.jpg
