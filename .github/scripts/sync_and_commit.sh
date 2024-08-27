@@ -16,7 +16,7 @@ mkdir -p $REMOTE_DIR
 
 echo "Syncing files from FTP server to local directory..."
 
-# Sync files from FTP to local directory
+# Sync files from FTP to a temporary directory
 lftp -f "
 open ftp://$FTP_USER:$FTP_PASSWORD@$FTP_HOST
 mirror --continue --delete --verbose --only-newer --no-empty-dirs $FTP_REMOTE_DIR $REMOTE_DIR
@@ -26,7 +26,7 @@ bye
 echo "Sync complete."
 
 # Move synced files to the repository root
-rsync -av --delete $REMOTE_DIR/ $LOCAL_DIR/
+rsync -av --exclude '.git' --exclude '.github' --delete $REMOTE_DIR/ $LOCAL_DIR/
 
 # Remove the temporary sync directory
 rm -rf $REMOTE_DIR
