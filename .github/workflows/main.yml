@@ -12,31 +12,35 @@ jobs:
     - name: Checkout dev branch
       uses: actions/checkout@v4
       with:
-        ref: dev  # Checkout the dev branch
+        ref: dev  # Ensure we are checking out the dev branch
+
+    - name: Verify .git directory
+      run: |
+        echo "Listing contents of current directory:"
+        ls -la
+        echo "Checking for .git directory:"
+        if [ -d .git ]; then
+          echo ".git directory found."
+        else
+          echo ".git directory not found. Exiting."
+          exit 1
+        fi
 
     - name: Install FTP client
       run: sudo apt-get update && sudo apt-get install -y lftp
 
-    - name: Generate branch name
-      id: generate_branch
-      run: |
-        DATE=$(date -u +"sigtax.com_%d_%m_%Y_%I_%M_%p")
-        echo "BRANCH_NAME=${DATE}" >> $GITHUB_ENV
-        echo "Generated branch name: ${DATE}"
-
-    - name: List local files
+    - name: List local files with sizes and modified dates
       run: |
         find . -type f -not -path './.git/*' -not -path './.github/*' -not -name 'files_to_keep.txt' -not -name 'ftp_files.txt' -not -name 'ftp_only_files.txt' -not -name 'git_files.txt' -not -name 'git_only_files.txt' -not -name 'local_files.txt' -not -name 'local_only_files.txt' -exec stat --format='%Y %s %n' {} \; | sort > local_files.txt
         echo "Local files list:"
         cat local_files.txt
 
-    - name: Sync FTP files
+    - name: List and sync remote files
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        echo "Listing files from the FTP server..."
         lftp -c "
           set ftp:ssl-force true;
           set ftp:ssl-protect-data true;
@@ -51,31 +55,33 @@ jobs:
     - name: Compare and Sync Files
       run: |
         echo "Comparing local and remote files"
-
+        
         # Sync files from remote to local
         while read -r remote_mod_time remote_size remote_path; do
           local_path="${remote_path}"
           local_dir=$(dirname "$local_path")
-
+        
           # Skip special files
-          if [[ "$local_path" == ./files_to_keep.txt || "$local_path" == ./ftp_files.txt || "$local_path" == ./ftp_only_files.txt || "$local_path" == ./git_files.txt || "$local_path" == ./git_only_files.txt || "$local_path" == ./local_files.txt || "$local_path" == ./local_only_files.txt ]]; then
+          if [[ "$local_path" == "./files_to_keep.txt" || "$local_path" == "./ftp_files.txt" || "$local_path" == "./ftp_only_files.txt" || "$local_path" == "./git_files.txt" || "$local_path" == "./git_only_files.txt" || "$local_path" == "./local_files.txt" || "$local_path" == "./local_only_files.txt" ]]; then
             continue
           fi
-
+        
           # Create the local directory if it doesn't exist
           if [ ! -d "$local_dir" ]; then
             echo "Creating directory: $local_dir"
             mkdir -p "$local_dir"
           fi
-
+        
           # Check if the remote file exists
           if [ -f "$remote_path" ]; then
             if [ -f "$local_path" ]; then
               local_mod_time=$(stat --format='%Y' "$local_path")
               local_size=$(stat --format='%s' "$local_path")
               if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
-                echo "Updating modified file: $local_path"
-                cp "$remote_path" "$local_path"
+                if [ "$remote_path" != "$local_path" ]; then
+                  echo "Updating modified file: $local_path"
+                  cp "$remote_path" "$local_path"
+                fi
               fi
             else
               echo "Adding new file: $local_path"
@@ -83,10 +89,10 @@ jobs:
             fi
           fi
         done < remote_files.txt
-
+        
         # Remove files that are no longer in the remote directory
         while read -r local_mod_time local_size local_path; do
-          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != ./files_to_keep.txt && "$local_path" != ./ftp_files.txt && "$local_path" != ./ftp_only_files.txt && "$local_path" != ./git_files.txt && "$local_path" != ./git_only_files.txt && "$local_path" != ./local_files.txt && "$local_path" != ./local_only_files.txt ]]; then
+          if [[ "$local_path" != .git/* && "$local_path" != ./.github/* && "$local_path" != "./files_to_keep.txt" && "$local_path" != "./ftp_files.txt" && "$local_path" != "./ftp_only_files.txt" && "$local_path" != "./git_files.txt" && "$local_path" != "./git_only_files.txt" && "$local_path" != "./local_files.txt" && "$local_path" != "./local_only_files.txt" ]]; then
             if [ ! -f "$local_path" ]; then
               echo "Removing local file not present on remote: $local_path"
               git rm "$local_path" || true
@@ -96,14 +102,19 @@ jobs:
 
     - name: Configure Git
       run: |
-        if [ -d .git ]; then
-          echo "Configuring Git."
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Action"
-        else
-          echo ".git directory not found. Exiting."
-          exit 1
-        fi
+        echo "Configuring Git."
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Action"
+        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/ajinkyathail/htdocs.git
+
+    - name: Create and Checkout New Branch
+      run: |
+        # Generate branch name in the format sigtax.com_dd_mm_yyyy_hh_mm_am_pm
+        BRANCH_NAME="sigtax.com_$(date -d 'TZ=\"CET\"' '+%d_%m_%Y_%I_%M_%p')"
+        echo "Branch name: $BRANCH_NAME"
+        
+        git checkout -b "$BRANCH_NAME"
+        git pull origin dev
 
     - name: Check for changes
       run: |
@@ -114,29 +125,24 @@ jobs:
           exit 0
         fi
 
-    - name: Create and Push to New Branch
+    - name: Commit and Push changes
       run: |
-        # Checkout the dev branch
-        git checkout dev
-
-        # Generate a new branch name
-        BRANCH_NAME=${{ env.BRANCH_NAME }}
-
-        # Create and switch to the new branch
-        git checkout -b "$BRANCH_NAME"
-
-        # Add all changes
         git add -A
-        
         if [[ -n $(git status --porcelain) ]]; then
           git commit -m "Sync root with FTP server"
-          git push origin "$BRANCH_NAME"
+          # Check if BRANCH_NAME is empty
+          if [[ -z "$BRANCH_NAME" ]]; then
+            echo "Branch name is empty. Exiting with error."
+            exit 1
+          else
+            git push origin "$BRANCH_NAME"
+          fi
         else
           echo "No changes to commit."
         fi
 
     - name: Cleanup
       run: |
-        # Remove special files after committing
+        # Remove special files and directories after committing
         rm -f files_to_keep.txt ftp_files.txt ftp_only_files.txt git_files.txt git_only_files.txt local_files.txt local_only_files.txt
-        rm -rf ftp_sync/
+        rm -rf ftp_sync
