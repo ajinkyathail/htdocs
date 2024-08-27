@@ -3,7 +3,7 @@ name: FTP Deployment
 on:
   push:
     branches:
-      - main  # Change this to the branch you want to trigger deployment from
+      - main  # Trigger deployment when pushing to the main branch
 
 jobs:
   ftp-deploy:
@@ -27,32 +27,16 @@ jobs:
 
     - name: Prepare directories for FTP operations
       run: |
-        # Create separate directories for changed and deleted files
-        mkdir -p ftp_operations/changed_files
-        mkdir -p ftp_operations/deleted_files
+        # Create directories for temporary files
+        mkdir -p ftp_operations/remote_files
+        mkdir -p ftp_operations/local_files
 
-    - name: Prepare changed files for deployment
+    - name: List files in the Git repository
       run: |
-        # Generate a list of files changed between the last two commits
-        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+        # List files in the Git repository with modification times and sizes
+        find . -type f -exec stat --format='%Y %s %n' {} \; | sort > ftp_operations/local_files.txt
 
-        # Copy changed files to the changed_files directory, preserving directory structure
-        for file in $CHANGED_FILES; do
-          if [ -f "$file" ]; then
-            mkdir -p "ftp_operations/changed_files/$(dirname "$file")"
-            cp "$file" "ftp_operations/changed_files/$file"
-          fi
-        done
-
-    - name: Prepare deleted files for removal
-      run: |
-        # Generate a list of files deleted in the last commit
-        DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD)
-
-        # Save deleted files list to a file in the deleted_files directory
-        echo "$DELETED_FILES" > ftp_operations/deleted_files/deleted_files.txt
-
-    - name: Deploy changed files to FTP server
+    - name: Download remote file list
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -63,27 +47,56 @@ jobs:
           set ftp:ssl-protect-data true;
           set ftp:ssl-force true;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          # Mirror command to upload only changed files, preserving existing files
-          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/changed_files/ www/sigtax.com/
+          mirror --verbose --only-newer --exclude-glob .git/ --no-perms www/sigtax.com/ ftp_operations/remote_files/
         "
 
-    - name: Remove deleted files from FTP server
-      if: success()  # Only run this step if the previous steps were successful
+    - name: List files in the remote directory
+      run: |
+        # List files in the FTP directory with modification times and sizes
+        find ftp_operations/remote_files/ -type f -exec stat --format='%Y %s %n' {} \; | sort > ftp_operations/remote_files_list.txt
+
+    - name: Compare and Sync Files
+      run: |
+        # Compare files and sync
+        while IFS= read -r remote_mod_time remote_size remote_path; do
+          local_path="${remote_path#ftp_operations/remote_files/}"
+          if [ -f "$local_path" ]; then
+            local_mod_time=$(stat --format='%Y' "$local_path")
+            local_size=$(stat --format='%s' "$local_path")
+            if [ "$remote_mod_time" -gt "$local_mod_time" ] || [ "$remote_size" -ne "$local_size" ]; then
+              echo "Updating modified file: $local_path"
+              cp "$remote_path" "$local_path"
+            fi
+          else
+            echo "Adding new file: $local_path"
+            mkdir -p "$(dirname "$local_path")"
+            cp "$remote_path" "$local_path"
+          fi
+        done < ftp_operations/remote_files_list.txt
+
+        # Remove files that are no longer present in the Git repository
+        while IFS= read -r local_mod_time local_size local_path; do
+          if [ ! -f "$local_path" ]; then
+            echo "Removing local file not present on remote: $local_path"
+            rm -f "$local_path"
+          fi
+        done < ftp_operations/local_files.txt
+
+    - name: Upload changes to FTP server
       env:
         FTP_HOST: ${{ secrets.FTP_HOST }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        while IFS= read -r file; do
-          if [ -n "$file" ]; then
-            # Remove leading directory path from file names
-            FTP_FILE_PATH="www/sigtax.com/${file#*/}"
-            lftp -c "
-              set ssl:verify-certificate no;
-              set ftp:ssl-protect-data true;
-              set ftp:ssl-force true;
-              open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-              rm -rf $FTP_FILE_PATH
-            "
-          fi
-        done < ftp_operations/deleted_files/deleted_files.txt
+        lftp -c "
+          set ssl:verify-certificate no;
+          set ftp:ssl-protect-data true;
+          set ftp:ssl-force true;
+          open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
+          mirror --reverse --only-newer --verbose --exclude-glob .git/ --no-perms ftp_operations/ www/sigtax.com/
+        "
+
+    - name: Cleanup
+      run: |
+        # Clean up temporary files and directories
+        rm -rf ftp_operations
