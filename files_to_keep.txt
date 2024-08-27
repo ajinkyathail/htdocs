@@ -1,8 +1,0 @@
-./JS/index.html
-./JS/real.php
-./files_to_keep.txt
-./index.html
-./watch_5.jpg
-./watch_6.jpg
-./watch_7.jpg
-./watch_8.jpg
