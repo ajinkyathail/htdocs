@@ -3,6 +3,8 @@
 1724612009 23502 ./watch_7.jpg
 1724762403 785 ./index.html
 1724762429 132 ./real.php
-1724763412 298 ./ftp_only_files.txt
-1724763412 68 ./files_to_keep.txt
-1724763412 71064 ./watch_8.jpg
+1724763863 0 ./ftp_only_files.txt
+1724763863 105 ./ftp_files.txt
+1724763863 133 ./git_files.txt
+1724763863 68 ./files_to_keep.txt
+1724763863 71064 ./watch_8.jpg
