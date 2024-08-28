@@ -57,7 +57,7 @@ jobs:
           set ftp:ssl-protect-data true;
           set ssl:verify-certificate no;
           open -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST;
-          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/ray/ ./
+          mirror --verbose --exclude .git/ --exclude .github/ /htdocs/htdocs/ ./
         "
 
     - name: Commit and Push Changes
